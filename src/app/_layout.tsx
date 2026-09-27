@@ -13,8 +13,6 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: 'Camping Map' }} />
-        <Stack.Screen name="site/[id]" options={{ title: 'Site details' }} />
-        <Stack.Screen name="submit" options={{ title: 'Add a spot', presentation: 'modal' }} />
       </Stack>
     </>
   )

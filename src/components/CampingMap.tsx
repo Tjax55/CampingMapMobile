@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, View, type NativeSyntheticEvent } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View, type NativeSyntheticEvent } from 'react-native'
 import {
   Map,
   Camera,
@@ -10,7 +10,6 @@ import {
   type GeoJSONSourceRef,
   type PressEventWithFeatures,
 } from '@maplibre/maplibre-react-native'
-import { router } from 'expo-router'
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import { useSites } from '@/hooks/useSites'
 import {
@@ -21,6 +20,8 @@ import {
   type Site,
 } from '@/types'
 import { FilterPanel } from './FilterPanel'
+import { SiteDetailPanel } from './SiteDetailPanel'
+import { SubmitPanel } from './SubmitPanel'
 
 /** Same OpenFreeMap style the web app uses — free vector tiles, no API key. */
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
@@ -84,6 +85,10 @@ export function CampingMap() {
   const [visible, setVisible] = useState<Set<FilterCategory>>(new Set(FILTER_CATEGORIES))
   const [showBlmLand, setShowBlmLand] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // Both rendered as overlays on top of this same, permanently-mounted map —
+  // see SiteDetailPanel's comment for why that's deliberate, not a shortcut.
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
+  const [submitOpen, setSubmitOpen] = useState(false)
   const sourceRef = useRef<GeoJSONSourceRef>(null)
   const cameraRef = useRef<CameraRef>(null)
 
@@ -110,7 +115,7 @@ export function CampingMap() {
 
     const site = feature as unknown as SiteFeature
     const id = site.properties?.id
-    if (id) router.push(`/site/${id}`)
+    if (id) setSelectedSiteId(id)
   }
 
   return (
@@ -203,6 +208,22 @@ export function CampingMap() {
         showBlmLand={showBlmLand}
         onToggleBlmLand={setShowBlmLand}
       />
+
+      {/* Floating rather than a native header button — this screen no longer
+          uses the Stack header's right-side slot for it, since that slot
+          lives in the route file (src/app/index.tsx), outside this
+          component, and the overlays it needs to open live in here. */}
+      {!selectedSiteId && !submitOpen && (
+        <TouchableOpacity style={styles.addButton} onPress={() => setSubmitOpen(true)}>
+          <Text style={styles.addButtonText}>Add a spot</Text>
+        </TouchableOpacity>
+      )}
+
+      {selectedSiteId && (
+        <SiteDetailPanel siteId={selectedSiteId} onClose={() => setSelectedSiteId(null)} />
+      )}
+
+      {submitOpen && <SubmitPanel onClose={() => setSubmitOpen(false)} />}
     </View>
   )
 }
@@ -221,4 +242,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   statusBannerText: { color: '#f4f1ea', fontSize: 12, textAlign: 'center' },
+  addButton: {
+    position: 'absolute',
+    top: 44,
+    right: 12,
+    backgroundColor: '#4f9d6b',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  addButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 12 },
 })
