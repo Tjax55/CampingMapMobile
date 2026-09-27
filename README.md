@@ -83,3 +83,10 @@ from the project owner testing and reporting back). Three real bugs were found a
   stack Open Sans Regular,Arial Unicode MS Regular`), seen in the on-device logs. Text labels on the
   base map (place names, etc.) may be missing as a result. Not yet investigated — pins, colors, and
   the land overlay all render fine regardless, so this hasn't blocked anything so far.
+- **A harmless "Can't perform a React state update on a component that hasn't mounted yet"
+  console warning**, seen occasionally in the on-device logs. Its stack trace only ever points at
+  generic React Native/Expo internals (`LogBoxData.js`, `ExpoRoot.js`), never at any file in this
+  app — it comes from `useAuth`'s Supabase sign-in listener (used by both `SiteDetailPanel` and
+  `SubmitPanel`), which is driven by the native Google Sign-In module and Supabase's background
+  session check rather than by anything on screen. It's a known, cosmetic-only quirk of that
+  combination and doesn't affect sign-in or anything else working correctly.
