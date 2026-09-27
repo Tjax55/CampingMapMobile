@@ -8,7 +8,6 @@ import {
   Layer,
   type CameraRef,
   type GeoJSONSourceRef,
-  type PressEvent,
   type PressEventWithFeatures,
 } from '@maplibre/maplibre-react-native'
 import { router } from 'expo-router'
@@ -93,12 +92,11 @@ export function CampingMap() {
     return toFeatureCollection(filtered)
   }, [sites, visible])
 
-  async function handleSourcePress(
-    event: NativeSyntheticEvent<PressEvent> | NativeSyntheticEvent<PressEventWithFeatures>,
-  ) {
-    const nativeEvent = event.nativeEvent
-    if (!('features' in nativeEvent)) return
-    const feature = nativeEvent.features[0]
+  // Attached to GeoJSONSource's onPress, not Map's — Map only receives
+  // `features` in its own onPress if a child Source's onPress bubbles them
+  // up, which nothing was doing. Taps silently did nothing as a result.
+  async function handleSourcePress(event: NativeSyntheticEvent<PressEventWithFeatures>) {
+    const feature = event.nativeEvent.features[0]
     if (!feature) return
 
     if (feature.properties?.cluster) {
@@ -133,7 +131,7 @@ export function CampingMap() {
         </Text>
       </View>
 
-      <Map style={styles.map} mapStyle={STYLE_URL} logo={false} onPress={handleSourcePress}>
+      <Map style={styles.map} mapStyle={STYLE_URL} logo={false}>
         <Camera ref={cameraRef} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
 
         {/* Rendered before the pins source so it sits underneath — same
@@ -154,6 +152,7 @@ export function CampingMap() {
           cluster
           clusterRadius={50}
           clusterMaxZoom={11}
+          onPress={handleSourcePress}
         >
           <Layer
             id="sites-cluster"
