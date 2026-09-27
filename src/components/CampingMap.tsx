@@ -154,9 +154,10 @@ export function CampingMap() {
           ref={sourceRef}
           id={SOURCE_ID}
           data={featureCollection}
-          cluster
-          clusterRadius={50}
-          clusterMaxZoom={11}
+          // TEMPORARY diagnostic: clustering disabled entirely, to isolate
+          // whether clustering itself is the broken piece versus something
+          // about the source/data more broadly. Will be reverted once
+          // confirmed either way.
           onPress={handleSourcePress}
         >
           <Layer
