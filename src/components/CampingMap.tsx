@@ -164,11 +164,15 @@ export function CampingMap() {
             type="circle"
             filter={['has', 'point_count']}
             paint={{
-              'circle-color': '#2f7a4d',
+              // TEMPORARY diagnostic: fixed color/radius, no expressions at
+              // all, to isolate whether the `step` expression was preventing
+              // this layer from rendering, versus clustering itself not
+              // engaging. Revert once confirmed either way.
+              'circle-color': '#ff0000',
               'circle-opacity': 0.85,
               'circle-stroke-width': 2,
               'circle-stroke-color': '#ffffff',
-              'circle-radius': ['step', ['get', 'point_count'], 16, 50, 22, 250, 30],
+              'circle-radius': 20,
             }}
           />
           <Layer
