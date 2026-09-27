@@ -117,18 +117,21 @@ export function CampingMap() {
 
   return (
     <View style={styles.container}>
-      {/* Surfaces useSites' loading/error state instead of silently showing
-          an empty map with no pins and no explanation — a real gap the first
-          on-device run exposed: there was previously no way to tell "still
-          loading" apart from "the fetch failed" apart from "there are
-          genuinely zero sites". */}
-      {(loading || error) && (
-        <View style={styles.statusBanner}>
-          <Text style={styles.statusBannerText}>
-            {error ? `Couldn't load sites: ${error}` : `Loading sites… (${sites.length} so far)`}
-          </Text>
-        </View>
-      )}
+      {/* Always visible, not just while loading/erroring — a real gap the
+          first on-device run exposed: with only a transient banner there was
+          no way to tell "0 sites because still loading" apart from "0 sites
+          because the fetch actually returned nothing" apart from "sites
+          loaded fine but aren't rendering". This makes that distinction
+          checkable at a glance instead of guessed at. */}
+      <View style={styles.statusBanner}>
+        <Text style={styles.statusBannerText}>
+          {error
+            ? `Couldn't load sites: ${error}`
+            : loading
+              ? `Loading sites… (${sites.length} so far)`
+              : `${sites.length} sites loaded, ${featureCollection.features.length} shown`}
+        </Text>
+      </View>
 
       <Map style={styles.map} mapStyle={STYLE_URL} logo={false} onPress={handleSourcePress}>
         <Camera ref={cameraRef} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
