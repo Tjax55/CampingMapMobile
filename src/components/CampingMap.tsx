@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { StyleSheet, View, type NativeSyntheticEvent } from 'react-native'
+import { StyleSheet, Text, View, type NativeSyntheticEvent } from 'react-native'
 import {
   Map,
   Camera,
@@ -81,7 +81,7 @@ const CATEGORY_COLOR_MATCH: any[] = [
 ]
 
 export function CampingMap() {
-  const { sites } = useSites()
+  const { sites, loading, error } = useSites()
   const [visible, setVisible] = useState<Set<FilterCategory>>(new Set(FILTER_CATEGORIES))
   const [showBlmLand, setShowBlmLand] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -117,6 +117,19 @@ export function CampingMap() {
 
   return (
     <View style={styles.container}>
+      {/* Surfaces useSites' loading/error state instead of silently showing
+          an empty map with no pins and no explanation — a real gap the first
+          on-device run exposed: there was previously no way to tell "still
+          loading" apart from "the fetch failed" apart from "there are
+          genuinely zero sites". */}
+      {(loading || error) && (
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusBannerText}>
+            {error ? `Couldn't load sites: ${error}` : `Loading sites… (${sites.length} so far)`}
+          </Text>
+        </View>
+      )}
+
       <Map style={styles.map} mapStyle={STYLE_URL} logo={false} onPress={handleSourcePress}>
         <Camera ref={cameraRef} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
 
@@ -195,4 +208,15 @@ export function CampingMap() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  statusBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#1d2b23',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  statusBannerText: { color: '#f4f1ea', fontSize: 12, textAlign: 'center' },
 })
