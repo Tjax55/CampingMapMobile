@@ -41,25 +41,45 @@ gives live-reloading development from then on, the same as Expo Go would for a p
   website's existing **Web application** client ID, reused as-is — see the comment in
   `src/lib/useAuth.ts` for why only that one goes in code.
 
-## What's not been verified on a real device
+## Verified on a real device
 
-Nothing in this app has been run on physical hardware or a simulator — building it required a
-native compile step this environment can't perform. Typechecking, linting, and `expo-doctor` all
-pass, and the trickiest API calls (MapLibre's `Layer`/`GeoJSONSource` props, the Google Sign-In
-library's `signIn()` response shape) were checked directly against the installed packages' type
-definitions rather than assumed from memory. But "typechecks correctly" and "renders correctly on
-a phone" are different claims — the first real build is where any remaining mismatches will surface.
+Built and installed on a physical Android phone via EAS Build, and tested there directly (this
+environment can't run a native build or see a device screen itself, so every finding below came
+from the project owner testing and reporting back). Three real bugs were found and fixed this way:
 
-## Known scope cuts from the web app (first pass)
+- **`npm install` failing in EAS's cloud build** — a react/react-dom peer dependency conflict that
+  needed `--legacy-peer-deps` locally also broke EAS's own install. Fixed with a committed `.npmrc`
+  so every install, local or cloud, uses that flag automatically.
+- **Tapping a pin did nothing** — `onPress` was attached to `Map`, but `Map` only receives tapped
+  `features` if a child `Source`'s own `onPress` bubbles them up. Moved to `GeoJSONSource`.
+- **The map's pins vanished after navigating to the site detail screen and back, and never
+  returned** — a known, unresolved Android bug in how `react-native-screens` (which Expo Router
+  uses) handles a heavy native view like a map being backgrounded and restored. Fixed by rendering
+  the site detail and submit screens as overlays on the same permanently-mounted map screen instead
+  of separate routes — see `SiteDetailPanel.tsx`'s comment.
 
+## Known scope cuts and limitations
+
+- **No clustering.** `GeoJSONSource`'s `cluster` prop was tested on-device and confirmed broken in
+  this library version (`@maplibre/maplibre-react-native` 11.4.0): with it on, nothing rendered
+  until zoomed in far past `clusterMaxZoom`, and only in the one spot zoomed into — even with the
+  cluster circle's styling simplified to flat values with no expressions. Turning `cluster` off
+  fixed rendering completely, confirmed live: all 8,700+ sites show correctly at every zoom. All
+  pins render individually now rather than grouping in dense areas at low zoom, unlike the website.
+  Worth revisiting if the library ships a fix, or on further investigation of why clustering
+  specifically (and only clustering) fails here.
 - **No custom van-icon pins.** The web app draws colored van silhouettes on a `<canvas>`; there's
-  no direct equivalent in React Native. Pins here are plain colored circles, colored the same way
-  clusters already are.
+  no direct equivalent in React Native. Pins here are plain colored circles.
 - **No National Forest land overlay.** The web app's version relies on a MapLibre GL JS-specific
   URL token (`{bbox-epsg-3857}`) to use a live ArcGIS endpoint as a raster tile source. Whether
   MapLibre *Native* (the different engine this library wraps) supports that same token is
-  unverified. Left out rather than shipped as a guess. The BLM overlay is unaffected — it's a
-  standard `{z}/{y}/{x}` tile cache, which every map engine supports.
+  unverified — not tested, since the clustering bug was the higher priority to chase down first.
+  Left out rather than shipped as a guess. The BLM overlay is unaffected — it's a standard
+  `{z}/{y}/{x}` tile cache, which every map engine supports, and is confirmed working on-device.
 - **"Add a spot" needs coordinates typed in**, not picked by tapping the map. The web version's
-  pick-on-map flow needs the map screen and the submit screen to hand a location back and forth,
-  which is real cross-screen navigation state not built in this pass.
+  pick-on-map flow needs the map screen and the submit panel to hand a location back and forth,
+  which is real state-coordination not built in this pass.
+- **Font glyphs 404 from OpenFreeMap on this device** (`Failed to load glyph range 0-255 for font
+  stack Open Sans Regular,Arial Unicode MS Regular`), seen in the on-device logs. Text labels on the
+  base map (place names, etc.) may be missing as a result. Not yet investigated — pins, colors, and
+  the land overlay all render fine regardless, so this hasn't blocked anything so far.

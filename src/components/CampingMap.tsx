@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View, type NativeSyntheticEvent } from 'react-native'
 import {
   Map,
@@ -6,8 +6,6 @@ import {
   GeoJSONSource,
   RasterSource,
   Layer,
-  type CameraRef,
-  type GeoJSONSourceRef,
   type PressEventWithFeatures,
 } from '@maplibre/maplibre-react-native'
 import type { Feature, FeatureCollection, Point } from 'geojson'
@@ -48,7 +46,6 @@ const BLM_TILE_URL =
   'https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_BLM_Only/MapServer/tile/{z}/{y}/{x}'
 
 type SiteFeature = Feature<Point, { id: string; category: FilterCategory }>
-type ClusterFeature = Feature<Point, { cluster: true; cluster_id: number; point_count: number }>
 
 function toFeatureCollection(sites: Site[]): FeatureCollection<Point> {
   return {
@@ -89,8 +86,6 @@ export function CampingMap() {
   // see SiteDetailPanel's comment for why that's deliberate, not a shortcut.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
-  const sourceRef = useRef<GeoJSONSourceRef>(null)
-  const cameraRef = useRef<CameraRef>(null)
 
   const featureCollection = useMemo(() => {
     const filtered = sites.filter((site) => visible.has(categoryOf(site)))
@@ -100,21 +95,9 @@ export function CampingMap() {
   // Attached to GeoJSONSource's onPress, not Map's — Map only receives
   // `features` in its own onPress if a child Source's onPress bubbles them
   // up, which nothing was doing. Taps silently did nothing as a result.
-  async function handleSourcePress(event: NativeSyntheticEvent<PressEventWithFeatures>) {
-    const feature = event.nativeEvent.features[0]
-    if (!feature) return
-
-    if (feature.properties?.cluster) {
-      const cluster = feature as unknown as ClusterFeature
-      if (!sourceRef.current) return
-      const zoom = await sourceRef.current.getClusterExpansionZoom(cluster.properties.cluster_id)
-      const center = cluster.geometry.coordinates as [number, number]
-      cameraRef.current?.easeTo({ center, zoom, duration: 300 })
-      return
-    }
-
-    const site = feature as unknown as SiteFeature
-    const id = site.properties?.id
+  function handleSourcePress(event: NativeSyntheticEvent<PressEventWithFeatures>) {
+    const feature = event.nativeEvent.features[0] as SiteFeature | undefined
+    const id = feature?.properties?.id
     if (id) setSelectedSiteId(id)
   }
 
@@ -137,7 +120,7 @@ export function CampingMap() {
       </View>
 
       <Map style={styles.map} mapStyle={STYLE_URL} logo={false}>
-        <Camera ref={cameraRef} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
+        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
 
         {/* Rendered before the pins source so it sits underneath — same
             reasoning as the web app's `beforeLayerId`. */}
@@ -150,48 +133,21 @@ export function CampingMap() {
           />
         </RasterSource>
 
-        <GeoJSONSource
-          ref={sourceRef}
-          id={SOURCE_ID}
-          data={featureCollection}
-          // TEMPORARY diagnostic: clustering disabled entirely, to isolate
-          // whether clustering itself is the broken piece versus something
-          // about the source/data more broadly. Will be reverted once
-          // confirmed either way.
-          onPress={handleSourcePress}
-        >
+        {/*
+         * No clustering. GeoJSONSource's `cluster` prop was tested on a real
+         * Android device and confirmed broken in this library version: with
+         * it on, nothing rendered until zoomed in far past clusterMaxZoom in
+         * one specific spot, and nothing elsewhere — even with the cluster
+         * circle's paint simplified to flat, non-expression values. Turning
+         * `cluster` off entirely fixed rendering completely (all 8,700+ sites
+         * showing correctly at every zoom, confirmed live). The unclustered
+         * pin rendering below was never the problem — only the clustering
+         * feature itself was. See the mobile app's README.
+         */}
+        <GeoJSONSource id={SOURCE_ID} data={featureCollection} onPress={handleSourcePress}>
           <Layer
-            id="sites-cluster"
+            id="sites-pins"
             type="circle"
-            filter={['has', 'point_count']}
-            paint={{
-              // TEMPORARY diagnostic: fixed color/radius, no expressions at
-              // all, to isolate whether the `step` expression was preventing
-              // this layer from rendering, versus clustering itself not
-              // engaging. Revert once confirmed either way.
-              'circle-color': '#ff0000',
-              'circle-opacity': 0.85,
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#ffffff',
-              'circle-radius': 20,
-            }}
-          />
-          <Layer
-            id="sites-cluster-count"
-            type="symbol"
-            filter={['has', 'point_count']}
-            layout={{
-              'text-field': ['get', 'point_count_abbreviated'],
-              'text-size': 12,
-              'text-allow-overlap': true,
-              'text-ignore-placement': true,
-            }}
-            paint={{ 'text-color': '#ffffff' }}
-          />
-          <Layer
-            id="sites-point"
-            type="circle"
-            filter={['!', ['has', 'point_count']]}
             paint={
               {
                 'circle-radius': 7,
