@@ -29,6 +29,12 @@
       "expo-status-bar",
       "@react-native-google-signin/google-signin",
       "@maplibre/maplibre-react-native"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e22df5ac-dab2-4b55-91b8-41d2950d1091"
+      }
+    }
   }
 }
