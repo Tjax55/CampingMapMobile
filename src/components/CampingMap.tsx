@@ -103,21 +103,19 @@ export function CampingMap() {
 
   return (
     <View style={styles.container}>
-      {/* Always visible, not just while loading/erroring — a real gap the
-          first on-device run exposed: with only a transient banner there was
-          no way to tell "0 sites because still loading" apart from "0 sites
-          because the fetch actually returned nothing" apart from "sites
-          loaded fine but aren't rendering". This makes that distinction
-          checkable at a glance instead of guessed at. */}
-      <View style={styles.statusBanner}>
-        <Text style={styles.statusBannerText}>
-          {error
-            ? `Couldn't load sites: ${error}`
-            : loading
-              ? `Loading sites… (${sites.length} so far)`
-              : `${sites.length} sites loaded, ${featureCollection.features.length} shown`}
-        </Text>
-      </View>
+      {/* Only shown while loading or on error — once sites have loaded
+          successfully there's nothing left to diagnose, and leaving a
+          permanent banner up overlapped the site detail panel's close
+          button. Still covers the original gap (telling "0 sites because
+          still loading" apart from "0 sites because the fetch returned
+          nothing") since both of those states keep the banner visible. */}
+      {(loading || error) && (
+        <View style={styles.statusBanner}>
+          <Text style={styles.statusBannerText}>
+            {error ? `Couldn't load sites: ${error}` : `Loading sites… (${sites.length} so far)`}
+          </Text>
+        </View>
+      )}
 
       <Map style={styles.map} mapStyle={STYLE_URL} logo={false}>
         <Camera initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
