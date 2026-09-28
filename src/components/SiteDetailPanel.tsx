@@ -1,5 +1,14 @@
 import { useMemo } from 'react'
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native'
 import { useSite } from '@/hooks/useSite'
 import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
@@ -59,80 +68,86 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
       )}
 
       {!loading && site && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.badge, { backgroundColor: KIND_COLORS[site.kind] }]}>
-            <Text style={styles.badgeText}>{KIND_LABELS[site.kind]}</Text>
-          </View>
-          <Text style={styles.title}>{site.name}</Text>
-
-          <View style={styles.ratingSummary}>
-            {avgRating ? (
-              <>
-                <Text style={styles.ratingScore}>{avgRating.average.toFixed(1)}/10</Text>
-                <Text style={styles.ratingCount}>
-                  {avgRating.count} {avgRating.count === 1 ? 'rating' : 'ratings'}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.ratingCount}>No ratings yet</Text>
-            )}
-          </View>
-
-          {site.description && (
-            <View style={styles.descriptionSection}>
-              <Text style={styles.heading}>Description</Text>
-              <Text style={styles.description}>{site.description}</Text>
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoider}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <View style={[styles.badge, { backgroundColor: KIND_COLORS[site.kind] }]}>
+              <Text style={styles.badgeText}>{KIND_LABELS[site.kind]}</Text>
             </View>
-          )}
+            <Text style={styles.title}>{site.name}</Text>
 
-          <CapacitySection
-            entries={entries}
-            loading={capacityLoading}
-            error={capacityError}
-            onAdd={addEntry}
-            session={session}
-            onSignIn={signInWithGoogle}
-          />
+            <View style={styles.ratingSummary}>
+              {avgRating ? (
+                <>
+                  <Text style={styles.ratingScore}>{avgRating.average.toFixed(1)}/10</Text>
+                  <Text style={styles.ratingCount}>
+                    {avgRating.count} {avgRating.count === 1 ? 'rating' : 'ratings'}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.ratingCount}>No ratings yet</Text>
+              )}
+            </View>
 
-          <VisitsSection
-            visits={visits}
-            loading={visitsLoading}
-            error={visitsError}
-            onAdd={addVisit}
-            session={session}
-            onSignIn={signInWithGoogle}
-          />
+            {site.description && (
+              <View style={styles.descriptionSection}>
+                <Text style={styles.heading}>Description</Text>
+                <Text style={styles.description}>{site.description}</Text>
+              </View>
+            )}
 
-          <View style={styles.metaSection}>
-            <Text style={styles.metaLabel}>Coordinates</Text>
-            <Text style={styles.metaValue}>
-              {site.lat.toFixed(5)}, {site.lon.toFixed(5)}
-            </Text>
+            <CapacitySection
+              entries={entries}
+              loading={capacityLoading}
+              error={capacityError}
+              onAdd={addEntry}
+              session={session}
+              onSignIn={signInWithGoogle}
+            />
 
-            <TouchableOpacity
-              style={styles.directionsButton}
-              onPress={() =>
-                Linking.openURL(
-                  `https://www.google.com/maps/dir/?api=1&destination=${site.lat},${site.lon}`,
-                )
-              }
-            >
-              <Text style={styles.directionsText}>Directions ↗</Text>
-            </TouchableOpacity>
+            <VisitsSection
+              visits={visits}
+              loading={visitsLoading}
+              error={visitsError}
+              onAdd={addVisit}
+              session={session}
+              onSignIn={signInWithGoogle}
+            />
 
-            <Text style={styles.source}>
-              {site.source === 'user'
-                ? 'Submitted by a camper'
-                : `Source: ${site.source.toUpperCase()}`}
-            </Text>
-          </View>
-        </ScrollView>
+            <View style={styles.metaSection}>
+              <Text style={styles.metaLabel}>Coordinates</Text>
+              <Text style={styles.metaValue}>
+                {site.lat.toFixed(5)}, {site.lon.toFixed(5)}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.directionsButton}
+                onPress={() =>
+                  Linking.openURL(
+                    `https://www.google.com/maps/dir/?api=1&destination=${site.lat},${site.lon}`,
+                  )
+                }
+              >
+                <Text style={styles.directionsText}>Directions ↗</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.source}>
+                {site.source === 'user'
+                  ? 'Submitted by a camper'
+                  : `Source: ${site.source.toUpperCase()}`}
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoider: { flex: 1 },
   panel: {
     position: 'absolute',
     top: 12,
