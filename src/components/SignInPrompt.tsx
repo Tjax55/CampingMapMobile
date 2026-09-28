@@ -1,19 +1,36 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useState } from 'react'
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 type Props = {
   message: string
-  onSignIn: () => void
+  onSignIn: () => Promise<string | null>
 }
 
-/** Web-app equivalent: src/lib/SignInPrompt.tsx. Shown wherever a write
+/**
+ * Web-app equivalent: src/lib/SignInPrompt.tsx. Shown wherever a write
  * action is gated behind auth — the submit screen and the visits/capacity
- * add-forms. */
+ * add-forms.
+ *
+ * onSignIn's returned error used to be discarded entirely (the button just
+ * called it and moved on), so a failed sign-in — the Google account picker
+ * closing with nothing happening — gave no feedback at all. This awaits it
+ * and surfaces whatever comes back.
+ */
 export function SignInPrompt({ message, onSignIn }: Props) {
+  const [signingIn, setSigningIn] = useState(false)
+
+  async function handlePress() {
+    setSigningIn(true)
+    const error = await onSignIn()
+    setSigningIn(false)
+    if (error) Alert.alert('Sign-in failed', error)
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.message}>{message}</Text>
-      <TouchableOpacity style={styles.button} onPress={onSignIn}>
-        <Text style={styles.buttonText}>Sign in with Google</Text>
+      <TouchableOpacity style={styles.button} onPress={handlePress} disabled={signingIn}>
+        <Text style={styles.buttonText}>{signingIn ? 'Signing in…' : 'Sign in with Google'}</Text>
       </TouchableOpacity>
     </View>
   )

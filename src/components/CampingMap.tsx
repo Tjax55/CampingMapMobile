@@ -12,6 +12,7 @@ import {
 } from '@maplibre/maplibre-react-native'
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import { useSites } from '@/hooks/useSites'
+import { displayNameFor, useAuth } from '@/lib/useAuth'
 import {
   CATEGORY_COLORS,
   FILTER_CATEGORIES,
@@ -81,6 +82,7 @@ const CATEGORY_COLOR_MATCH: any[] = [
 
 export function CampingMap() {
   const { sites, loading, error } = useSites()
+  const { session, signOut } = useAuth()
   const [visible, setVisible] = useState<Set<FilterCategory>>(new Set(FILTER_CATEGORIES))
   const [showBlmLand, setShowBlmLand] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -191,6 +193,8 @@ export function CampingMap() {
         onChange={setVisible}
         showBlmLand={showBlmLand}
         onToggleBlmLand={setShowBlmLand}
+        signedInAs={session ? displayNameFor(session) : null}
+        onSignOut={signOut}
       />
 
       {/* Floating rather than a native header button — this screen no longer

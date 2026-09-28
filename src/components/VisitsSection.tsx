@@ -11,7 +11,7 @@ type Props = {
   error: string | null
   onAdd: (input: Omit<VisitInput, 'site_id'>) => Promise<string | null>
   session: Session | null
-  onSignIn: () => void
+  onSignIn: () => Promise<string | null>
 }
 
 const RATINGS = Array.from({ length: 10 }, (_, i) => i + 1)

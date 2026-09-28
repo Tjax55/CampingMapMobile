@@ -10,7 +10,7 @@ type Props = {
   error: string | null
   onAdd: (input: Omit<CapacityInput, 'site_id'>) => Promise<string | null>
   session: Session | null
-  onSignIn: () => void
+  onSignIn: () => Promise<string | null>
 }
 
 /** Web-app equivalent: src/sites/CapacitySection.tsx. */

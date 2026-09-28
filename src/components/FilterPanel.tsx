@@ -8,6 +8,8 @@ type Props = {
   onChange: (next: Set<FilterCategory>) => void
   showBlmLand: boolean
   onToggleBlmLand: (next: boolean) => void
+  signedInAs: string | null
+  onSignOut: () => void
 }
 
 function Checkbox({ checked, color }: { checked: boolean; color: string }) {
@@ -23,7 +25,16 @@ function Checkbox({ checked, color }: { checked: boolean; color: string }) {
  * BLM-land toggle, just a tap-to-open floating panel instead of an
  * always-visible sidebar — screen space is much tighter on a phone.
  */
-export function FilterPanel({ open, onToggleOpen, visible, onChange, showBlmLand, onToggleBlmLand }: Props) {
+export function FilterPanel({
+  open,
+  onToggleOpen,
+  visible,
+  onChange,
+  showBlmLand,
+  onToggleBlmLand,
+  signedInAs,
+  onSignOut,
+}: Props) {
   function toggleCategory(category: FilterCategory) {
     const next = new Set(visible)
     if (next.has(category)) next.delete(category)
@@ -61,6 +72,16 @@ export function FilterPanel({ open, onToggleOpen, visible, onChange, showBlmLand
               Dispersed camping is usually allowed, typically 14 nights. Closures and local rules
               vary — check signage.
             </Text>
+
+            {signedInAs && (
+              <>
+                <Text style={styles.sectionTitle}>Account</Text>
+                <Text style={styles.rowLabel}>{signedInAs}</Text>
+                <TouchableOpacity style={styles.signOutButton} onPress={onSignOut}>
+                  <Text style={styles.signOutText}>Sign out</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </ScrollView>
         </View>
       )}
@@ -133,4 +154,6 @@ const styles = StyleSheet.create({
     color: '#8a978f',
     marginTop: 6,
   },
+  signOutButton: { marginTop: 8, alignSelf: 'flex-start' },
+  signOutText: { color: '#a33', fontWeight: '600', fontSize: 13 },
 })

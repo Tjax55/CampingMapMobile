@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { GoogleSignin, isSuccessResponse, isErrorWithCode } from '@react-native-google-signin/google-signin'
 import { supabase } from './supabase'
+
+/**
+ * Whether a signed-in session should survive an app restart. Defaults to
+ * "remember" (matches the underlying Supabase client, which always persists
+ * to AsyncStorage) — this flag only exists to let someone opt OUT of that at
+ * the login screen, in which case the effect below signs them back out on
+ * the next cold start instead of silently restoring the old session.
+ */
+const REMEMBER_ME_KEY = 'campingmap.rememberMe'
 
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_AUTH_WEB_CLIENT_ID
 
@@ -40,21 +50,34 @@ export function useAuth() {
 
   useEffect(() => {
     if (!supabase) return
+    let cancelled = false
 
-    supabase.auth.getSession().then(({ data }) => {
-      setState({ session: data.session, loading: false })
-    })
+    // Runs once, before the very first getSession() result is used: if the
+    // user unchecked "remember me" last time, this signs them back out of
+    // the session AsyncStorage already restored, rather than letting it
+    // flash the signed-in app before anyone's decided whether to keep it.
+    ;(async () => {
+      const remember = await AsyncStorage.getItem(REMEMBER_ME_KEY)
+      if (remember === 'false') {
+        await supabase.auth.signOut()
+      }
+      const { data } = await supabase.auth.getSession()
+      if (!cancelled) setState({ session: data.session, loading: false })
+    })()
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState({ session, loading: false })
+      if (!cancelled) setState({ session, loading: false })
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
-  async function signInWithGoogle(): Promise<string | null> {
+  async function signInWithGoogle(rememberMe = true): Promise<string | null> {
     if (!supabase) return 'Supabase is not configured.'
     if (!webClientId) return 'Google sign-in is not configured (missing web client ID).'
 
@@ -71,7 +94,9 @@ export function useAuth() {
         token: response.data.idToken,
       })
 
-      return error?.message ?? null
+      if (error) return error.message
+      await AsyncStorage.setItem(REMEMBER_ME_KEY, String(rememberMe))
+      return null
     } catch (error) {
       if (isErrorWithCode(error)) return `Google sign-in failed: ${error.code}`
       return error instanceof Error ? error.message : String(error)
