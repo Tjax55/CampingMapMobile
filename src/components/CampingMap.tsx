@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View, type NativeSyntheticEvent } from 'react-native'
+import { useMemo, useRef, useState } from 'react'
+import { Alert, StyleSheet, Text, TouchableOpacity, View, type NativeSyntheticEvent } from 'react-native'
 import {
   Map,
   Camera,
   GeoJSONSource,
   RasterSource,
   Layer,
+  LocationManager,
+  type CameraRef,
   type PressEventWithFeatures,
 } from '@maplibre/maplibre-react-native'
 import type { Feature, FeatureCollection, Point } from 'geojson'
@@ -86,6 +88,7 @@ export function CampingMap() {
   // see SiteDetailPanel's comment for why that's deliberate, not a shortcut.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
+  const cameraRef = useRef<CameraRef>(null)
 
   const featureCollection = useMemo(() => {
     const filtered = sites.filter((site) => visible.has(categoryOf(site)))
@@ -99,6 +102,28 @@ export function CampingMap() {
     const feature = event.nativeEvent.features[0] as SiteFeature | undefined
     const id = feature?.properties?.id
     if (id) setSelectedSiteId(id)
+  }
+
+  async function handleLocateMe() {
+    const granted = await LocationManager.requestPermissions()
+    if (!granted) {
+      Alert.alert(
+        'Location permission needed',
+        'Enable location access for Camping Map in your phone settings to use this button.',
+      )
+      return
+    }
+
+    const position = await LocationManager.getCurrentPosition()
+    if (!position) {
+      Alert.alert("Couldn't get your location", 'Make sure location services are turned on and try again.')
+      return
+    }
+
+    cameraRef.current?.flyTo({
+      center: [position.coords.longitude, position.coords.latitude],
+      zoom: 12,
+    })
   }
 
   return (
@@ -118,7 +143,7 @@ export function CampingMap() {
       )}
 
       <Map style={styles.map} mapStyle={STYLE_URL} logo={false}>
-        <Camera initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
+        <Camera ref={cameraRef} initialViewState={{ center: INITIAL_CENTER, zoom: INITIAL_ZOOM }} />
 
         {/* Rendered before the pins source so it sits underneath — same
             reasoning as the web app's `beforeLayerId`. */}
@@ -178,6 +203,12 @@ export function CampingMap() {
         </TouchableOpacity>
       )}
 
+      {!selectedSiteId && !submitOpen && (
+        <TouchableOpacity style={styles.locateButton} onPress={handleLocateMe}>
+          <Text style={styles.locateButtonText}>⊙</Text>
+        </TouchableOpacity>
+      )}
+
       {selectedSiteId && (
         <SiteDetailPanel siteId={selectedSiteId} onClose={() => setSelectedSiteId(null)} />
       )}
@@ -216,4 +247,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   addButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 12 },
+  locateButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  locateButtonText: { color: '#1d2b23', fontSize: 22, fontWeight: '600' },
 })

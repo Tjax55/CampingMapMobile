@@ -9,7 +9,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tjax55.campingmap"
+      "bundleIdentifier": "com.tjax55.campingmap",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Camping Map uses your location to center the map on where you are."
+      }
     },
     "android": {
       "package": "com.tjax55.campingmap",
