@@ -90,3 +90,9 @@ from the project owner testing and reporting back). Three real bugs were found a
   `SubmitPanel`), which is driven by the native Google Sign-In module and Supabase's background
   session check rather than by anything on screen. It's a known, cosmetic-only quirk of that
   combination and doesn't affect sign-in or anything else working correctly.
+- **A harmless "viewIsDescendantOf() noop: Cannot find view with reactTag ####" console warning**,
+  seen on screens using `react-native-keyboard-aware-scroll-view` (site detail, submit, admin
+  review). That library still calls an old-architecture UIManager API to check where the
+  keyboard-focused field is; on this app's newer Fabric engine that specific check silently no-ops
+  instead of crashing — the warning's own text says "noop." The auto-scroll-to-focused-field
+  behavior the library is there for keeps working regardless; nothing user-visible is affected.
