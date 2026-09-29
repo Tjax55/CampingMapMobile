@@ -1,14 +1,6 @@
 import { useState } from 'react'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/useAuth'
 import { SignInPrompt } from './SignInPrompt'
@@ -95,92 +87,92 @@ export function SubmitPanel({ onClose }: Props) {
           </TouchableOpacity>
         </View>
       ) : (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={20}
         >
-          <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.panelTitle}>Add a spot</Text>
+          <Text style={styles.panelTitle}>Add a spot</Text>
 
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              maxLength={120}
-              placeholder="Walmart — Flagstaff, AZ"
-            />
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            maxLength={120}
+            placeholder="Walmart — Flagstaff, AZ"
+          />
 
-            <Text style={styles.label}>Type</Text>
-            <View style={styles.kindRow}>
-              {SITE_KINDS.map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={[styles.kindPill, kind === option && styles.kindPillActive]}
-                  onPress={() => setKind(option)}
-                >
-                  <Text style={[styles.kindPillText, kind === option && styles.kindPillTextActive]}>
-                    {KIND_LABELS[option]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <Text style={styles.label}>Type</Text>
+          <View style={styles.kindRow}>
+            {SITE_KINDS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[styles.kindPill, kind === option && styles.kindPillActive]}
+                onPress={() => setKind(option)}
+              >
+                <Text style={[styles.kindPillText, kind === option && styles.kindPillTextActive]}>
+                  {KIND_LABELS[option]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.coordsRow}>
+            <View style={styles.coordsField}>
+              <Text style={styles.label}>Latitude</Text>
+              <TextInput
+                style={styles.input}
+                value={lat}
+                onChangeText={setLat}
+                keyboardType="numbers-and-punctuation"
+                placeholder="36.09621"
+              />
             </View>
-
-            <View style={styles.coordsRow}>
-              <View style={styles.coordsField}>
-                <Text style={styles.label}>Latitude</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lat}
-                  onChangeText={setLat}
-                  keyboardType="numbers-and-punctuation"
-                  placeholder="36.09621"
-                />
-              </View>
-              <View style={styles.coordsField}>
-                <Text style={styles.label}>Longitude</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lon}
-                  onChangeText={setLon}
-                  keyboardType="numbers-and-punctuation"
-                  placeholder="-75.72051"
-                />
-              </View>
+            <View style={styles.coordsField}>
+              <Text style={styles.label}>Longitude</Text>
+              <TextInput
+                style={styles.input}
+                value={lon}
+                onChangeText={setLon}
+                keyboardType="numbers-and-punctuation"
+                placeholder="-75.72051"
+              />
             </View>
+          </View>
 
-            <Text style={styles.label}>What should campers know?</Text>
-            <TextInput
-              style={styles.textArea}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-              maxLength={1000}
-              placeholder="Quiet corner behind the garden centre. Manager is fine with overnight."
-            />
+          <Text style={styles.label}>What should campers know?</Text>
+          <TextInput
+            style={styles.textArea}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={3}
+            maxLength={1000}
+            placeholder="Quiet corner behind the garden centre. Manager is fine with overnight."
+          />
 
-            <Text style={styles.label}>Note for the reviewer (optional)</Text>
-            <TextInput style={styles.input} value={note} onChangeText={setNote} maxLength={300} />
+          <Text style={styles.label}>Note for the reviewer (optional)</Text>
+          <TextInput style={styles.input} value={note} onChangeText={setNote} maxLength={300} />
 
-            {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text style={styles.error}>{error}</Text>}
 
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                (!hasValidCoords || !name.trim() || status === 'saving') &&
-                  styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!hasValidCoords || !name.trim() || status === 'saving'}
-            >
-              <Text style={styles.submitButtonText}>
-                {status === 'saving' ? 'Sending…' : 'Submit for review'}
-              </Text>
-            </TouchableOpacity>
-            <Text style={styles.help}>Submissions are reviewed before they appear on the map.</Text>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!hasValidCoords || !name.trim() || status === 'saving') &&
+                styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={!hasValidCoords || !name.trim() || status === 'saving'}
+          >
+            <Text style={styles.submitButtonText}>
+              {status === 'saving' ? 'Sending…' : 'Submit for review'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.help}>Submissions are reviewed before they appear on the map.</Text>
+        </KeyboardAwareScrollView>
       )}
     </View>
   )

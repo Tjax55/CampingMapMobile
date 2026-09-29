@@ -1,14 +1,6 @@
 import { useMemo } from 'react'
-import {
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native'
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { useSite } from '@/hooks/useSite'
 import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
@@ -68,11 +60,12 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
       )}
 
       {!loading && site && (
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoider}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAwareScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid
+          extraScrollHeight={20}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={[styles.badge, { backgroundColor: KIND_COLORS[site.kind] }]}>
               <Text style={styles.badgeText}>{KIND_LABELS[site.kind]}</Text>
             </View>
@@ -139,15 +132,13 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
                   : `Source: ${site.source.toUpperCase()}`}
               </Text>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoider: { flex: 1 },
   panel: {
     position: 'absolute',
     top: 12,
