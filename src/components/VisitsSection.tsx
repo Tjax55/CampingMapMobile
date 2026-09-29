@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
 import { displayNameFor } from '@/lib/useAuth'
+import { BRAND } from '@/theme'
 import type { Visit, VisitInput } from '@/types'
 import { SignInPrompt } from './SignInPrompt'
 
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   entryHead: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 },
   username: { fontWeight: '600', color: '#1d2b23', fontSize: 13 },
   ratingBadge: {
-    backgroundColor: '#2f7a4d',
+    backgroundColor: BRAND.oxblood,
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 1,
@@ -202,9 +203,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ratingPillActive: { backgroundColor: '#2f7a4d', borderColor: '#2f7a4d' },
+  ratingPillActive: { backgroundColor: BRAND.brass, borderColor: BRAND.brass },
   ratingPillText: { fontSize: 12, color: '#1d2b23' },
-  ratingPillTextActive: { color: '#ffffff', fontWeight: '700' },
+  ratingPillTextActive: { color: '#1d2b23', fontWeight: '700' },
   textArea: {
     borderWidth: 1,
     borderColor: '#cfd8d2',
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 4,
-    backgroundColor: '#2f7a4d',
+    backgroundColor: BRAND.oxblood,
     borderRadius: 6,
     paddingVertical: 9,
     alignItems: 'center',

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
+import { BRAND } from '@/theme'
 import type { CapacityEntry, CapacityInput } from '@/types'
 import { SignInPrompt } from './SignInPrompt'
 
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
   entry: { fontSize: 13, color: '#3f4f46', fontVariant: ['tabular-nums'] },
   entryPending: { fontStyle: 'italic', color: '#8a978f' },
   pendingBadge: {
-    backgroundColor: '#f2d98a',
+    backgroundColor: BRAND.brass,
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 1,
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   submitButton: {
-    backgroundColor: '#2f7a4d',
+    backgroundColor: BRAND.oxblood,
     borderRadius: 6,
     paddingVertical: 9,
     alignItems: 'center',

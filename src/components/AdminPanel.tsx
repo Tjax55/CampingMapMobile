@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { useAdminReview } from '@/hooks/useAdminReview'
+import { BRAND } from '@/theme'
 import type { PendingSiteEditProposal } from '@/types'
 
 type Props = {
@@ -215,16 +216,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
+  // Kept a neutral gray rather than the brand's own red-toned oxblood — with
+  // "Approve" now oxblood, a reddish "Reject" too would read as two shades
+  // of the same color instead of two distinct actions.
   rejectButton: {
     borderWidth: 1,
-    borderColor: '#c99',
+    borderColor: '#cfd8d2',
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  rejectText: { color: '#a33', fontSize: 12, fontWeight: '600' },
+  rejectText: { color: '#6b7a70', fontSize: 12, fontWeight: '600' },
   approveButton: {
-    backgroundColor: '#2f7a4d',
+    backgroundColor: BRAND.oxblood,
     borderRadius: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,

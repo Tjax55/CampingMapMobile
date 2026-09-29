@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, type TextStyle } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
+import { BRAND } from '@/theme'
 import type { SiteEditField, SiteEditProposal } from '@/types'
 
 type Props = {
@@ -104,14 +105,14 @@ export function SiteFieldEditor({
 }
 
 const styles = StyleSheet.create({
-  suggestLink: { fontSize: 11, color: '#2f7a4d', fontWeight: '600', marginBottom: 4 },
+  suggestLink: { fontSize: 11, color: BRAND.oxblood, fontWeight: '600', marginBottom: 4 },
   pendingBox: {
     marginBottom: 6,
     padding: 8,
     borderRadius: 6,
     backgroundColor: '#fbf3dc',
     borderWidth: 1,
-    borderColor: '#f2d98a',
+    borderColor: BRAND.brass,
   },
   pendingLabel: {
     fontSize: 10,
@@ -134,6 +135,6 @@ const styles = StyleSheet.create({
   error: { fontSize: 12, color: '#a33' },
   editActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 14 },
   cancelText: { fontSize: 13, color: '#8a978f', fontWeight: '600' },
-  saveButton: { backgroundColor: '#2f7a4d', borderRadius: 6, paddingVertical: 7, paddingHorizontal: 14 },
+  saveButton: { backgroundColor: BRAND.oxblood, borderRadius: 6, paddingVertical: 7, paddingHorizontal: 14 },
   saveButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '600' },
 })

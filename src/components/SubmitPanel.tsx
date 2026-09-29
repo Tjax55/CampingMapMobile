@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/useAuth'
+import { BRAND } from '@/theme'
 import { SignInPrompt } from './SignInPrompt'
 import { SITE_KINDS, KIND_LABELS, type SiteKind } from '@/types'
 
@@ -236,14 +237,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-  kindPillActive: { backgroundColor: '#2f7a4d', borderColor: '#2f7a4d' },
+  kindPillActive: { backgroundColor: BRAND.brass, borderColor: BRAND.brass },
   kindPillText: { fontSize: 12, color: '#1d2b23' },
-  kindPillTextActive: { color: '#ffffff', fontWeight: '600' },
+  kindPillTextActive: { color: '#1d2b23', fontWeight: '700' },
   coordsRow: { flexDirection: 'row', gap: 10 },
   coordsField: { flex: 1 },
   submitButton: {
     marginTop: 18,
-    backgroundColor: '#2f7a4d',
+    backgroundColor: BRAND.oxblood,
     borderRadius: 6,
     paddingVertical: 11,
     alignItems: 'center',
