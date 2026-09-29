@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { useAdminReview } from '@/hooks/useAdminReview'
 import type { PendingSiteEditProposal } from '@/types'
 
@@ -88,7 +89,12 @@ export function AdminPanel({ adminUserId, onClose }: Props) {
         <Text style={styles.closeButtonText}>✕</Text>
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
         <Text style={styles.panelTitle}>Admin review</Text>
 
         {loading && <Text style={styles.muted}>Loading…</Text>}
@@ -140,7 +146,7 @@ export function AdminPanel({ adminUserId, onClose }: Props) {
             onReview={(decision, value) => reviewProposal(proposal, decision, value, adminUserId)}
           />
         ))}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   )
 }
