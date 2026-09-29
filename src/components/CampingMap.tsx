@@ -111,7 +111,7 @@ export function CampingMap() {
     if (!granted) {
       Alert.alert(
         'Location permission needed',
-        'Enable location access for Camping Map in your phone settings to use this button.',
+        'Enable location access for FreeCamp in your phone settings to use this button.',
       )
       return
     }

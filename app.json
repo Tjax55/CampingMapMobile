@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Camping Map",
+    "name": "FreeCamp",
     "slug": "camping_map_mobile",
     "scheme": "campingmap",
     "version": "1.0.0",
@@ -11,7 +11,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tjax55.campingmap",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Camping Map uses your location to center the map on where you are."
+        "NSLocationWhenInUseUsageDescription": "FreeCamp uses your location to center the map on where you are."
       }
     },
     "android": {

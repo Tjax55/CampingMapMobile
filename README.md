@@ -1,4 +1,4 @@
-# Camping Map (mobile)
+# FreeCamp (mobile)
 
 The Android/iPhone counterpart to the [camping_map](../camping_map) website — same Supabase
 project, same data, same login, different screens. Built with Expo + React Native.

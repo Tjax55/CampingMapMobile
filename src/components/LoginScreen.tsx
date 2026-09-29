@@ -26,7 +26,7 @@ export function LoginScreen({ onSignIn }: Props) {
   return (
     <View style={styles.container}>
       <Image source={require('../../assets/icon.png')} style={styles.logo} />
-      <Text style={styles.title}>Camping Map</Text>
+      <Text style={styles.title}>FreeCamp</Text>
       <Text style={styles.subtitle}>Sign in to find and log campsites.</Text>
 
       <TouchableOpacity style={styles.button} onPress={handlePress} disabled={signingIn}>
