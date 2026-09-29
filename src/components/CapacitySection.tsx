@@ -54,9 +54,24 @@ export function CapacitySection({ entries, loading, error, onAdd, session, onSig
       )}
 
       {entries.map((entry) => (
-        <Text key={entry.id} style={styles.entry}>
-          {entry.count} × {entry.vehicle_type}
-        </Text>
+        <View key={entry.id} style={styles.entryRow}>
+          <Text style={[styles.entry, entry.status !== 'approved' && styles.entryPending]}>
+            {entry.count} × {entry.vehicle_type}
+          </Text>
+          {/* Only the submitter ever sees a non-approved entry at all — RLS
+              hides other people's pending/rejected reports entirely — so this
+              badge is always about "your" report, never someone else's. */}
+          {entry.status === 'pending' && (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingBadgeText}>Pending review</Text>
+            </View>
+          )}
+          {entry.status === 'rejected' && (
+            <View style={styles.rejectedBadge}>
+              <Text style={styles.pendingBadgeText}>Not approved</Text>
+            </View>
+          )}
+        </View>
       ))}
 
       {session ? (
@@ -113,7 +128,22 @@ const styles = StyleSheet.create({
   },
   muted: { fontSize: 13, color: '#8a978f', marginBottom: 6 },
   error: { fontSize: 13, color: '#a33', marginVertical: 4 },
-  entry: { fontSize: 13, color: '#3f4f46', marginBottom: 4, fontVariant: ['tabular-nums'] },
+  entryRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  entry: { fontSize: 13, color: '#3f4f46', fontVariant: ['tabular-nums'] },
+  entryPending: { fontStyle: 'italic', color: '#8a978f' },
+  pendingBadge: {
+    backgroundColor: '#f2d98a',
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  rejectedBadge: {
+    backgroundColor: '#e3b3ae',
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  pendingBadgeText: { color: '#4a3b0e', fontSize: 10, fontWeight: '700' },
   form: { marginTop: 8, gap: 8 },
   row: { flexDirection: 'row', gap: 8 },
   fieldWide: { flex: 1 },

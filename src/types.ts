@@ -37,8 +37,15 @@ export type SubmissionInput = {
   user_id: string
 }
 
-/** Mirrors the `visits` table. A guestbook entry: a name, an optional
- * comment, and an optional 1-10 rating — see supabase/schema.sql. */
+/**
+ * Mirrors the `visits` table. A guestbook entry: a name, an optional
+ * comment, and an optional 1-10 rating — see supabase/schema.sql.
+ *
+ * "User data" in the user-data/admin-data split (see
+ * planning/decisions/2026-09-29-admin-review-for-capacity-and-site-edits.md
+ * in the website repo) — the poster owns it and can edit it directly
+ * (`visits_update_own`), no admin review, unlike CapacityEntry below.
+ */
 export type Visit = {
   id: string
   site_id: string
@@ -46,6 +53,7 @@ export type Visit = {
   comment: string | null
   rating: number | null
   created_at: string
+  user_id: string | null
 }
 
 export type VisitInput = {
@@ -56,14 +64,28 @@ export type VisitInput = {
   user_id: string
 }
 
-/** Mirrors the `site_capacity` table. `vehicle_type` is free text — see the
- * comment on the table in supabase/schema.sql for why. */
+/** A pending or resolved review state for a piece of "admin data" — see
+ * ReviewStatus. Mirrors the `submission_status` Postgres enum. */
+export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+
+/**
+ * Mirrors the `site_capacity` table. `vehicle_type` is free text — see the
+ * comment on the table in supabase/schema.sql for why.
+ *
+ * "Admin data" as of the migration referenced on Visit above: a new report
+ * defaults to `status: 'pending'` and isn't publicly visible until an admin
+ * approves it. A submitter can still see their own pending/rejected report
+ * (site_capacity_read_own), which is the only way a non-approved status
+ * value reaches the app at all.
+ */
 export type CapacityEntry = {
   id: string
   site_id: string
   vehicle_type: string
   count: number
   created_at: string
+  user_id: string | null
+  status: ReviewStatus
 }
 
 export type CapacityInput = {
@@ -71,6 +93,48 @@ export type CapacityInput = {
   vehicle_type: string
   count: number
   user_id: string
+}
+
+/**
+ * Mirrors the `site_edit_proposals` table — a user-suggested new value for
+ * an existing site's name or description, the other kind of admin data.
+ * Only ever fetched with `status: 'pending'` (see site_edit_proposals_public_read),
+ * since an approved proposal's value has already been copied into `sites`
+ * and a rejected one isn't shown to anyone.
+ */
+export type SiteEditField = 'name' | 'description'
+
+export type SiteEditProposal = {
+  id: string
+  site_id: string
+  field: SiteEditField
+  proposed_value: string
+  proposed_by: string | null
+  status: ReviewStatus
+  created_at: string
+}
+
+/** A pending capacity report joined with its site's name, for the admin
+ * review screen — the raw CapacityEntry doesn't carry the site name. */
+export type PendingCapacityReport = {
+  id: string
+  site_id: string
+  site_name: string
+  vehicle_type: string
+  count: number
+  created_at: string
+}
+
+/** A pending site edit proposal joined with its site's name and the field's
+ * current (live) value, so the admin screen can show a before/after. */
+export type PendingSiteEditProposal = {
+  id: string
+  site_id: string
+  site_name: string
+  field: SiteEditField
+  current_value: string | null
+  proposed_value: string
+  created_at: string
 }
 
 export const KIND_LABELS: Record<SiteKind, string> = {

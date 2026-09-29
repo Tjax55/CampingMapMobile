@@ -8,7 +8,7 @@ type State = {
   error: string | null
 }
 
-const COLUMNS = 'id, site_id, username, comment, rating, created_at'
+const COLUMNS = 'id, site_id, username, comment, rating, created_at, user_id'
 
 async function fetchVisits(siteId: string): Promise<Visit[]> {
   if (!supabase) throw new Error('Supabase is not configured.')
@@ -65,5 +65,21 @@ export function useVisits(siteId: string) {
     return null
   }
 
-  return { ...state, addVisit }
+  /**
+   * Edits an existing visit in place — the "Save" side of the Post/Save
+   * button, backed by the `visits_update_own` RLS policy (a user can only
+   * update a row where they're the original poster).
+   */
+  async function updateVisit(
+    visitId: string,
+    input: Pick<VisitInput, 'comment' | 'rating'>,
+  ): Promise<string | null> {
+    if (!supabase) return 'Supabase is not configured.'
+    const { error } = await supabase.from('visits').update(input).eq('id', visitId)
+    if (error) return error.message
+    reload()
+    return null
+  }
+
+  return { ...state, addVisit, updateVisit }
 }

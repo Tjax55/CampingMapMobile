@@ -10,6 +10,8 @@ type Props = {
   onToggleBlmLand: (next: boolean) => void
   signedInAs: string | null
   onSignOut: () => void
+  isAdmin: boolean
+  onOpenAdmin: () => void
 }
 
 function Checkbox({ checked, color }: { checked: boolean; color: string }) {
@@ -34,6 +36,8 @@ export function FilterPanel({
   onToggleBlmLand,
   signedInAs,
   onSignOut,
+  isAdmin,
+  onOpenAdmin,
 }: Props) {
   function toggleCategory(category: FilterCategory) {
     const next = new Set(visible)
@@ -77,6 +81,11 @@ export function FilterPanel({
               <>
                 <Text style={styles.sectionTitle}>Account</Text>
                 <Text style={styles.rowLabel}>{signedInAs}</Text>
+                {isAdmin && (
+                  <TouchableOpacity style={styles.adminButton} onPress={onOpenAdmin}>
+                    <Text style={styles.adminText}>Admin review</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.signOutButton} onPress={onSignOut}>
                   <Text style={styles.signOutText}>Sign out</Text>
                 </TouchableOpacity>
@@ -154,6 +163,8 @@ const styles = StyleSheet.create({
     color: '#8a978f',
     marginTop: 6,
   },
+  adminButton: { marginTop: 8, alignSelf: 'flex-start' },
+  adminText: { color: '#2f7a4d', fontWeight: '600', fontSize: 13 },
   signOutButton: { marginTop: 8, alignSelf: 'flex-start' },
   signOutText: { color: '#a33', fontWeight: '600', fontSize: 13 },
 })

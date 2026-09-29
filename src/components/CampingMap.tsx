@@ -13,6 +13,7 @@ import {
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import { useSites } from '@/hooks/useSites'
 import { displayNameFor, useAuth } from '@/lib/useAuth'
+import { useIsAdmin } from '@/lib/useIsAdmin'
 import {
   CATEGORY_COLORS,
   FILTER_CATEGORIES,
@@ -20,6 +21,7 @@ import {
   type FilterCategory,
   type Site,
 } from '@/types'
+import { AdminPanel } from './AdminPanel'
 import { FilterPanel } from './FilterPanel'
 import { SiteDetailPanel } from './SiteDetailPanel'
 import { SubmitPanel } from './SubmitPanel'
@@ -83,13 +85,15 @@ const CATEGORY_COLOR_MATCH: any[] = [
 export function CampingMap() {
   const { sites, loading, error } = useSites()
   const { session, signOut } = useAuth()
+  const isAdmin = useIsAdmin(session)
   const [visible, setVisible] = useState<Set<FilterCategory>>(new Set(FILTER_CATEGORIES))
   const [showBlmLand, setShowBlmLand] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  // Both rendered as overlays on top of this same, permanently-mounted map —
+  // All rendered as overlays on top of this same, permanently-mounted map —
   // see SiteDetailPanel's comment for why that's deliberate, not a shortcut.
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   const cameraRef = useRef<CameraRef>(null)
 
   const featureCollection = useMemo(() => {
@@ -195,19 +199,21 @@ export function CampingMap() {
         onToggleBlmLand={setShowBlmLand}
         signedInAs={session ? displayNameFor(session) : null}
         onSignOut={signOut}
+        isAdmin={isAdmin}
+        onOpenAdmin={() => setAdminOpen(true)}
       />
 
       {/* Floating rather than a native header button — this screen no longer
           uses the Stack header's right-side slot for it, since that slot
           lives in the route file (src/app/index.tsx), outside this
           component, and the overlays it needs to open live in here. */}
-      {!selectedSiteId && !submitOpen && (
+      {!selectedSiteId && !submitOpen && !adminOpen && (
         <TouchableOpacity style={styles.addButton} onPress={() => setSubmitOpen(true)}>
           <Text style={styles.addButtonText}>Add a spot</Text>
         </TouchableOpacity>
       )}
 
-      {!selectedSiteId && !submitOpen && (
+      {!selectedSiteId && !submitOpen && !adminOpen && (
         <TouchableOpacity style={styles.locateButton} onPress={handleLocateMe}>
           <Text style={styles.locateButtonText}>⊙</Text>
         </TouchableOpacity>
@@ -218,6 +224,10 @@ export function CampingMap() {
       )}
 
       {submitOpen && <SubmitPanel onClose={() => setSubmitOpen(false)} />}
+
+      {adminOpen && session && (
+        <AdminPanel adminUserId={session.user.id} onClose={() => setAdminOpen(false)} />
+      )}
     </View>
   )
 }

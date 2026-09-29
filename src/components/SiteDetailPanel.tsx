@@ -4,10 +4,12 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useSite } from '@/hooks/useSite'
 import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
+import { useSiteEditProposals } from '@/hooks/useSiteEditProposals'
 import { useAuth } from '@/lib/useAuth'
-import { KIND_COLORS, KIND_LABELS } from '@/types'
+import { KIND_COLORS, KIND_LABELS, type SiteEditField } from '@/types'
 import { VisitsSection } from './VisitsSection'
 import { CapacitySection } from './CapacitySection'
+import { SiteFieldEditor } from './SiteFieldEditor'
 
 type Props = {
   siteId: string
@@ -31,8 +33,15 @@ type Props = {
 export function SiteDetailPanel({ siteId, onClose }: Props) {
   const { site, loading, error } = useSite(siteId)
   const { session, signInWithGoogle } = useAuth()
-  const { visits, loading: visitsLoading, error: visitsError, addVisit } = useVisits(siteId)
+  const {
+    visits,
+    loading: visitsLoading,
+    error: visitsError,
+    addVisit,
+    updateVisit,
+  } = useVisits(siteId)
   const { entries, loading: capacityLoading, error: capacityError, addEntry } = useCapacity(siteId)
+  const { proposals, propose } = useSiteEditProposals(siteId)
 
   const avgRating = useMemo(() => {
     const ratings = visits.map((v) => v.rating).filter((r): r is number => r != null)
@@ -40,6 +49,14 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
     const sum = ratings.reduce((total, r) => total + r, 0)
     return { average: sum / ratings.length, count: ratings.length }
   }, [visits])
+
+  const pendingNameEdit = proposals.find((p) => p.field === 'name') ?? null
+  const pendingDescriptionEdit = proposals.find((p) => p.field === 'description') ?? null
+
+  async function handlePropose(field: SiteEditField, value: string): Promise<string | null> {
+    if (!session) return 'Sign in to suggest an edit.'
+    return propose(field, value, session.user.id)
+  }
 
   return (
     <View style={styles.panel}>
@@ -69,7 +86,15 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
             <View style={[styles.badge, { backgroundColor: KIND_COLORS[site.kind] }]}>
               <Text style={styles.badgeText}>{KIND_LABELS[site.kind]}</Text>
             </View>
-            <Text style={styles.title}>{site.name}</Text>
+            <SiteFieldEditor
+              field="name"
+              currentValue={site.name}
+              placeholder="Site name"
+              pendingProposal={pendingNameEdit}
+              session={session}
+              textStyle={styles.title}
+              onPropose={handlePropose}
+            />
 
             <View style={styles.ratingSummary}>
               {avgRating ? (
@@ -84,10 +109,20 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               )}
             </View>
 
-            {site.description && (
+            {(site.description || pendingDescriptionEdit || session) && (
               <View style={styles.descriptionSection}>
                 <Text style={styles.heading}>Description</Text>
-                <Text style={styles.description}>{site.description}</Text>
+                <SiteFieldEditor
+                  field="description"
+                  currentValue={site.description ?? ''}
+                  displayValue={site.description || 'No description yet.'}
+                  placeholder="What should campers know about this site?"
+                  pendingProposal={pendingDescriptionEdit}
+                  session={session}
+                  multiline
+                  textStyle={styles.description}
+                  onPropose={handlePropose}
+                />
               </View>
             )}
 
@@ -105,6 +140,7 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               loading={visitsLoading}
               error={visitsError}
               onAdd={addVisit}
+              onUpdate={updateVisit}
               session={session}
               onSignIn={signInWithGoogle}
             />

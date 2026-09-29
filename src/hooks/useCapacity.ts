@@ -8,7 +8,7 @@ type State = {
   error: string | null
 }
 
-const COLUMNS = 'id, site_id, vehicle_type, count, created_at'
+const COLUMNS = 'id, site_id, vehicle_type, count, created_at, user_id, status'
 
 async function fetchCapacity(siteId: string): Promise<CapacityEntry[]> {
   if (!supabase) throw new Error('Supabase is not configured.')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
 import { displayNameFor } from '@/lib/useAuth'
@@ -10,42 +10,84 @@ type Props = {
   loading: boolean
   error: string | null
   onAdd: (input: Omit<VisitInput, 'site_id'>) => Promise<string | null>
+  onUpdate: (visitId: string, input: Pick<VisitInput, 'comment' | 'rating'>) => Promise<string | null>
   session: Session | null
   onSignIn: () => Promise<string | null>
 }
 
 const RATINGS = Array.from({ length: 10 }, (_, i) => i + 1)
 
+// Reopening a site within this window offers to edit the same visit instead
+// of posting a duplicate one — see the mobile session's "Save" vs "Post"
+// feature and the admin-review-workflow decision record for why visits
+// (unlike capacity reports) are editable at all.
+const SAME_VISIT_WINDOW_MS = 2 * 24 * 60 * 60 * 1000
+
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 /** Web-app equivalent: src/sites/VisitsSection.tsx. */
-export function VisitsSection({ visits, loading, error, onAdd, session, onSignIn }: Props) {
+export function VisitsSection({ visits, loading, error, onAdd, onUpdate, session, onSignIn }: Props) {
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  // Captured once at mount rather than read fresh in the useMemo below —
+  // Date.now() is an impure call, and the "is this within 2 days" check
+  // doesn't need to be live-updating down to the millisecond anyway.
+  const [now] = useState(() => Date.now())
+
+  // `visits` is already newest-first (see useVisits' order), so the first
+  // match here is this user's most recent visit to this site.
+  const recentOwnVisit = useMemo(() => {
+    if (!session) return null
+    return (
+      visits.find(
+        (v) => v.user_id === session.user.id && now - new Date(v.created_at).getTime() < SAME_VISIT_WINDOW_MS,
+      ) ?? null
+    )
+  }, [visits, session, now])
+
+  // Pre-fills the form from the visit being edited. Keyed on the visit's id
+  // rather than the object itself, so this only runs when which visit is
+  // "the one to edit" actually changes — not on every reload (e.g. right
+  // after saving), which would otherwise stomp on further edits in flight.
+  useEffect(() => {
+    if (recentOwnVisit) {
+      // Same reasoning as useVisits' reload: this needs to run once when the
+      // visit to edit becomes known, not be expressed as derived render state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setComment(recentOwnVisit.comment ?? '')
+      setRating(recentOwnVisit.rating)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentOwnVisit?.id])
 
   async function handleSubmit() {
     if (!session) return
     setSaving(true)
     setFormError(null)
 
-    const result = await onAdd({
-      username: displayNameFor(session),
-      comment: comment.trim() || null,
-      rating,
-      user_id: session.user.id,
-    })
+    const result = recentOwnVisit
+      ? await onUpdate(recentOwnVisit.id, { comment: comment.trim() || null, rating })
+      : await onAdd({
+          username: displayNameFor(session),
+          comment: comment.trim() || null,
+          rating,
+          user_id: session.user.id,
+        })
 
     setSaving(false)
     if (result) {
       setFormError(result)
       return
     }
-    setComment('')
-    setRating(null)
+    if (!recentOwnVisit) {
+      setComment('')
+      setRating(null)
+    }
   }
 
   return (
@@ -75,7 +117,9 @@ export function VisitsSection({ visits, loading, error, onAdd, session, onSignIn
 
       {session ? (
         <View style={styles.form}>
-          <Text style={styles.muted}>Posting as {displayNameFor(session)}</Text>
+          <Text style={styles.muted}>
+            {recentOwnVisit ? 'Editing your visit' : 'Posting as'} {displayNameFor(session)}
+          </Text>
 
           <Text style={styles.label}>Rating (optional)</Text>
           <View style={styles.ratingRow}>
@@ -110,7 +154,9 @@ export function VisitsSection({ visits, loading, error, onAdd, session, onSignIn
             onPress={handleSubmit}
             disabled={saving}
           >
-            <Text style={styles.submitButtonText}>{saving ? 'Posting…' : 'Post visit'}</Text>
+            <Text style={styles.submitButtonText}>
+              {saving ? (recentOwnVisit ? 'Saving…' : 'Posting…') : recentOwnVisit ? 'Save' : 'Post visit'}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
