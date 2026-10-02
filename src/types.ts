@@ -62,6 +62,9 @@ export type VisitInput = {
   comment: string | null
   rating: number | null
   user_id: string
+  /** Optional — omitted means the database default (now). Set when the poster
+   * picks a different day for a visit. */
+  created_at?: string
 }
 
 /** A pending or resolved review state for a piece of "admin data" — see

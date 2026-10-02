@@ -1,19 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import type { Session } from '@supabase/supabase-js'
 import { displayNameFor } from '@/lib/useAuth'
 import { BRAND } from '@/theme'
 import type { Visit, VisitInput } from '@/types'
-import { SignInPrompt } from './SignInPrompt'
+import { DateField } from './DateField'
 
 type Props = {
   visits: Visit[]
   loading: boolean
   error: string | null
   onAdd: (input: Omit<VisitInput, 'site_id'>) => Promise<string | null>
-  onUpdate: (visitId: string, input: Pick<VisitInput, 'comment' | 'rating'>) => Promise<string | null>
+  onUpdate: (
+    visitId: string,
+    input: Pick<VisitInput, 'comment' | 'rating' | 'created_at'>,
+  ) => Promise<string | null>
   session: Session | null
-  onSignIn: () => Promise<string | null>
+  isAdmin: boolean
 }
 
 // Five big stars for easy tapping; each star is worth 2 points because the
@@ -22,77 +25,182 @@ type Props = {
 const STARS = [1, 2, 3, 4, 5]
 const POINTS_PER_STAR = 2
 
-// Reopening a site within this window offers to edit the same visit instead
-// of posting a duplicate one — see the mobile session's "Save" vs "Post"
-// feature and the admin-review-workflow decision record for why visits
-// (unlike capacity reports) are editable at all.
-const SAME_VISIT_WINDOW_MS = 2 * 24 * 60 * 60 * 1000
-
-function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+function starsLit(rating: number | null): number {
+  return rating == null ? 0 : Math.round(rating / POINTS_PER_STAR)
 }
 
-/** Web-app equivalent: src/sites/VisitsSection.tsx. */
-export function VisitsSection({ visits, loading, error, onAdd, onUpdate, session, onSignIn }: Props) {
-  const [comment, setComment] = useState('')
-  const [rating, setRating] = useState<number | null>(null)
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  )
+}
+
+type FormValues = { comment: string | null; rating: number | null; created_at?: string }
+
+type FormProps = {
+  title: string
+  subtitle: string
+  initialDate: Date
+  initialRating: number | null
+  initialComment: string
+  onSave: (values: FormValues) => Promise<string | null>
+  onCancel: () => void
+}
+
+function VisitForm({
+  title,
+  subtitle,
+  initialDate,
+  initialRating,
+  initialComment,
+  onSave,
+  onCancel,
+}: FormProps) {
+  const [date, setDate] = useState(initialDate)
+  const [rating, setRating] = useState<number | null>(initialRating)
+  const [comment, setComment] = useState(initialComment)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  // Captured once at mount rather than read fresh in the useMemo below —
-  // Date.now() is an impure call, and the "is this within 2 days" check
-  // doesn't need to be live-updating down to the millisecond anyway.
-  const [now] = useState(() => Date.now())
-
-  // `visits` is already newest-first (see useVisits' order), so the first
-  // match here is this user's most recent visit to this site.
-  const recentOwnVisit = useMemo(() => {
-    if (!session) return null
-    return (
-      visits.find(
-        (v) => v.user_id === session.user.id && now - new Date(v.created_at).getTime() < SAME_VISIT_WINDOW_MS,
-      ) ?? null
-    )
-  }, [visits, session, now])
-
-  // Pre-fills the form from the visit being edited. Keyed on the visit's id
-  // rather than the object itself, so this only runs when which visit is
-  // "the one to edit" actually changes — not on every reload (e.g. right
-  // after saving), which would otherwise stomp on further edits in flight.
-  useEffect(() => {
-    if (recentOwnVisit) {
-      // Same reasoning as useVisits' reload: this needs to run once when the
-      // visit to edit becomes known, not be expressed as derived render state.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setComment(recentOwnVisit.comment ?? '')
-      setRating(recentOwnVisit.rating)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recentOwnVisit?.id])
-
-  async function handleSubmit() {
-    if (!session) return
+  async function handleSave() {
     setSaving(true)
     setFormError(null)
 
-    const result = recentOwnVisit
-      ? await onUpdate(recentOwnVisit.id, { comment: comment.trim() || null, rating })
+    // Only the day is chosen; keep the original time of day so ordering
+    // within a day stays sensible. Untouched dates are left out entirely so
+    // the database default (new visit) or existing value (edit) stands.
+    const dayChanged = !sameDay(date, initialDate)
+    const created_at = dayChanged
+      ? new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          initialDate.getHours(),
+          initialDate.getMinutes(),
+          initialDate.getSeconds(),
+        ).toISOString()
+      : undefined
+
+    const result = await onSave({ comment: comment.trim() || null, rating, created_at })
+    setSaving(false)
+    if (result) setFormError(result)
+  }
+
+  return (
+    <View style={styles.form}>
+      <Text style={styles.formTitle}>{title}</Text>
+      <Text style={styles.muted}>{subtitle}</Text>
+
+      <Text style={styles.label}>Date</Text>
+      <DateField value={date} onChange={setDate} />
+
+      <Text style={styles.label}>
+        Rating (optional){rating != null ? ' — ' + rating + '/10' : ''}
+      </Text>
+      <View style={styles.starRow}>
+        {STARS.map((n) => {
+          const value = n * POINTS_PER_STAR
+          return (
+            <TouchableOpacity
+              key={n}
+              style={styles.starButton}
+              onPress={() => setRating(rating === value ? null : value)}
+              accessibilityLabel={n + (n === 1 ? ' star' : ' stars')}
+            >
+              <Text style={[styles.star, n <= starsLit(rating) && styles.starFilled]}>★</Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      <Text style={styles.label}>Comment (optional)</Text>
+      <TextInput
+        style={styles.textArea}
+        value={comment}
+        onChangeText={setComment}
+        multiline
+        numberOfLines={3}
+        maxLength={1000}
+        placeholder="What did you see? Anything future campers should know?"
+      />
+
+      {formError && <Text style={styles.error}>{formError}</Text>}
+
+      <View style={styles.formActions}>
+        <TouchableOpacity onPress={onCancel} disabled={saving}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.submitButton, saving && styles.submitButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          <Text style={styles.submitButtonText}>{saving ? 'Saving…' : 'Save'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
+}
+
+/**
+ * Web-app equivalent: src/sites/VisitsSection.tsx. One line per visit (date
+ * and star rating). Tapping your own visit — or any visit, if you're an
+ * admin — opens it for editing; tapping someone else's just expands it to
+ * read the comment. "Add visit" opens the same form for a new visit.
+ */
+export function VisitsSection({ visits, loading, error, onAdd, onUpdate, session, isAdmin }: Props) {
+  // null = showing the list; { visit: null } = new visit; { visit } = editing.
+  const [editor, setEditor] = useState<{ visit: Visit | null } | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  function canEdit(visit: Visit): boolean {
+    return session != null && (isAdmin || visit.user_id === session.user.id)
+  }
+
+  async function save(values: FormValues): Promise<string | null> {
+    if (!session || !editor) return null
+    const result = editor.visit
+      ? await onUpdate(editor.visit.id, values)
       : await onAdd({
           username: displayNameFor(session),
-          comment: comment.trim() || null,
-          rating,
           user_id: session.user.id,
+          ...values,
         })
+    if (!result) setEditor(null)
+    return result
+  }
 
-    setSaving(false)
-    if (result) {
-      setFormError(result)
-      return
-    }
-    if (!recentOwnVisit) {
-      setComment('')
-      setRating(null)
-    }
+  if (editor) {
+    const editing = editor.visit
+    const editingSomeoneElse = editing != null && session != null && editing.user_id !== session.user.id
+    return (
+      <View style={styles.section}>
+        <Text style={styles.heading}>Visits</Text>
+        <VisitForm
+          // Remounts with fresh values whenever a different visit is opened.
+          key={editing?.id ?? 'new'}
+          title={editing ? 'Edit visit' : 'New visit'}
+          subtitle={
+            editing
+              ? editingSomeoneElse
+                ? `Editing ${editing.username}'s visit (admin)`
+                : 'Editing your visit'
+              : session
+                ? `Posting as ${displayNameFor(session)}`
+                : ''
+          }
+          initialDate={editing ? new Date(editing.created_at) : new Date()}
+          initialRating={editing?.rating ?? null}
+          initialComment={editing?.comment ?? ''}
+          onSave={save}
+          onCancel={() => setEditor(null)}
+        />
+      </View>
+    )
   }
 
   return (
@@ -105,72 +213,41 @@ export function VisitsSection({ visits, loading, error, onAdd, onUpdate, session
         <Text style={styles.muted}>No visits logged yet — be the first.</Text>
       )}
 
-      {visits.map((visit) => (
-        <View key={visit.id} style={styles.entry}>
-          <View style={styles.entryHead}>
-            <Text style={styles.username}>{visit.username}</Text>
-            {visit.rating != null && (
-              <View style={styles.ratingBadge}>
-                <Text style={styles.ratingBadgeText}>{visit.rating}/10</Text>
+      {visits.map((visit) => {
+        const editable = canEdit(visit)
+        const expanded = expandedId === visit.id
+        return (
+          <View key={visit.id}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => (editable ? setEditor({ visit }) : setExpandedId(expanded ? null : visit.id))}
+            >
+              <Text style={styles.rowDate}>{formatDate(visit.created_at)}</Text>
+              <Text style={styles.rowStars}>
+                {visit.rating == null
+                  ? '—'
+                  : STARS.map((n) => (
+                      <Text key={n} style={n <= starsLit(visit.rating) ? styles.rowStarOn : styles.rowStarOff}>
+                        ★
+                      </Text>
+                    ))}
+              </Text>
+              <Text style={styles.rowChevron}>{editable ? '✎' : expanded ? '▴' : '▾'}</Text>
+            </TouchableOpacity>
+            {expanded && !editable && (
+              <View style={styles.expanded}>
+                <Text style={styles.username}>{visit.username}</Text>
+                <Text style={styles.comment}>{visit.comment || 'No comment.'}</Text>
               </View>
             )}
-            <Text style={styles.timestamp}>{formatTimestamp(visit.created_at)}</Text>
           </View>
-          {visit.comment && <Text style={styles.comment}>{visit.comment}</Text>}
-        </View>
-      ))}
+        )
+      })}
 
-      {session ? (
-        <View style={styles.form}>
-          <Text style={styles.muted}>
-            {recentOwnVisit ? 'Editing your visit' : 'Posting as'} {displayNameFor(session)}
-          </Text>
-
-          <Text style={styles.label}>
-            Rating (optional){rating != null ? ' — ' + rating + '/10' : ''}
-          </Text>
-          <View style={styles.starRow}>
-            {STARS.map((n) => {
-              const filled = rating != null && n <= Math.round(rating / POINTS_PER_STAR)
-              const value = n * POINTS_PER_STAR
-              return (
-                <TouchableOpacity
-                  key={n}
-                  style={styles.starButton}
-                  onPress={() => setRating(rating === value ? null : value)}
-                  accessibilityLabel={n + (n === 1 ? ' star' : ' stars')}
-                >
-                  <Text style={[styles.star, filled && styles.starFilled]}>★</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-
-          <Text style={styles.label}>Comment (optional)</Text>
-          <TextInput
-            style={styles.textArea}
-            value={comment}
-            onChangeText={setComment}
-            multiline
-            numberOfLines={3}
-            maxLength={1000}
-            placeholder="What did you see? Anything future campers should know?"
-          />
-
-          {formError && <Text style={styles.error}>{formError}</Text>}
-
-          <TouchableOpacity
-            style={[styles.submitButton, saving && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={saving}
-          >
-            <Text style={styles.submitButtonText}>
-              {saving ? (recentOwnVisit ? 'Saving…' : 'Posting…') : recentOwnVisit ? 'Save' : 'Post visit'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <SignInPrompt message="Sign in to post a visit." onSignIn={onSignIn} />
+      {session && (
+        <TouchableOpacity style={styles.addButton} onPress={() => setEditor({ visit: null })}>
+          <Text style={styles.submitButtonText}>Add visit</Text>
+        </TouchableOpacity>
       )}
     </View>
   )
@@ -188,19 +265,30 @@ const styles = StyleSheet.create({
   },
   muted: { fontSize: 13, color: '#8a978f', marginBottom: 6 },
   error: { fontSize: 13, color: '#a33', marginVertical: 4 },
-  entry: { marginBottom: 10 },
-  entryHead: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 },
-  username: { fontWeight: '600', color: '#1d2b23', fontSize: 13 },
-  ratingBadge: {
-    backgroundColor: BRAND.oxblood,
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef1ef',
   },
-  ratingBadgeText: { color: '#ffffff', fontSize: 11, fontWeight: '600' },
-  timestamp: { marginLeft: 'auto', fontSize: 11, color: '#8a978f' },
+  rowDate: { flex: 1, fontSize: 14, color: '#1d2b23', fontWeight: '600' },
+  rowStars: { fontSize: 16, letterSpacing: 1, marginRight: 10, color: '#8a978f' },
+  rowStarOn: { color: BRAND.brass },
+  rowStarOff: { color: '#d9dfdb' },
+  rowChevron: { width: 20, textAlign: 'center', fontSize: 14, color: BRAND.oxblood },
+  expanded: { paddingVertical: 8, paddingHorizontal: 4, backgroundColor: '#f4f6f5' },
+  username: { fontWeight: '600', color: '#1d2b23', fontSize: 13 },
   comment: { marginTop: 3, fontSize: 13, color: '#3f4f46', lineHeight: 18 },
-  form: { marginTop: 8, gap: 6 },
+  addButton: {
+    marginTop: 12,
+    backgroundColor: BRAND.oxblood,
+    borderRadius: 6,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  form: { gap: 6 },
+  formTitle: { fontSize: 16, fontWeight: '700', color: '#1d2b23' },
   label: { fontSize: 12, fontWeight: '600', color: '#3f4f46', marginTop: 4 },
   starRow: { flexDirection: 'row' },
   starButton: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center' },
@@ -215,11 +303,13 @@ const styles = StyleSheet.create({
     minHeight: 64,
     textAlignVertical: 'top',
   },
+  formActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 14, marginTop: 6 },
+  cancelText: { fontSize: 13, color: '#8a978f', fontWeight: '600' },
   submitButton: {
-    marginTop: 4,
     backgroundColor: BRAND.oxblood,
     borderRadius: 6,
-    paddingVertical: 9,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
     alignItems: 'center',
   },
   submitButtonDisabled: { backgroundColor: '#b3c4ba' },

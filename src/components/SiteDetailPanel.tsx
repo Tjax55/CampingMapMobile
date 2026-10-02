@@ -6,6 +6,7 @@ import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
 import { useSiteEditProposals } from '@/hooks/useSiteEditProposals'
 import { useAuth } from '@/lib/useAuth'
+import { useIsAdmin } from '@/lib/useIsAdmin'
 import { BRAND } from '@/theme'
 import { KIND_COLORS, KIND_LABELS } from '@/types'
 import { VisitsSection } from './VisitsSection'
@@ -33,7 +34,8 @@ type Props = {
  */
 export function SiteDetailPanel({ siteId, onClose }: Props) {
   const { site, loading, error } = useSite(siteId)
-  const { session, signInWithGoogle } = useAuth()
+  const { session } = useAuth()
+  const isAdmin = useIsAdmin(session)
   const {
     visits,
     loading: visitsLoading,
@@ -226,7 +228,7 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               onAdd={addVisit}
               onUpdate={updateVisit}
               session={session}
-              onSignIn={signInWithGoogle}
+              isAdmin={isAdmin}
             />
 
             <View style={styles.metaSection}>

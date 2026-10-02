@@ -66,13 +66,13 @@ export function useVisits(siteId: string) {
   }
 
   /**
-   * Edits an existing visit in place — the "Save" side of the Post/Save
-   * button, backed by the `visits_update_own` RLS policy (a user can only
-   * update a row where they're the original poster).
+   * Edits an existing visit in place (date, comment, rating), backed by the
+   * `visits_update_own` RLS policy (a user can only update their own row)
+   * and `visits_admin_update` (an admin can update anyone's).
    */
   async function updateVisit(
     visitId: string,
-    input: Pick<VisitInput, 'comment' | 'rating'>,
+    input: Pick<VisitInput, 'comment' | 'rating' | 'created_at'>,
   ): Promise<string | null> {
     if (!supabase) return 'Supabase is not configured.'
     const { error } = await supabase.from('visits').update(input).eq('id', visitId)
