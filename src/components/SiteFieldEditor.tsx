@@ -15,6 +15,9 @@ type Props = {
   pendingProposal: SiteEditProposal | null
   session: Session | null
   multiline?: boolean
+  /** When set, long text is clamped to this many lines with a Show more /
+   * Show less toggle (only shown if the text actually overflows). */
+  collapsedLines?: number
   textStyle: TextStyle
   onPropose: (field: SiteEditField, value: string) => Promise<string | null>
 }
@@ -34,6 +37,7 @@ export function SiteFieldEditor({
   pendingProposal,
   session,
   multiline,
+  collapsedLines,
   textStyle,
   onPropose,
 }: Props) {
@@ -41,6 +45,8 @@ export function SiteFieldEditor({
   const [draft, setDraft] = useState(currentValue)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [overflows, setOverflows] = useState(false)
 
   async function handleSubmit() {
     if (!draft.trim()) return
@@ -79,9 +85,33 @@ export function SiteFieldEditor({
     )
   }
 
+  const shownText = displayValue ?? currentValue
+
   return (
     <View>
-      <Text style={textStyle}>{displayValue ?? currentValue}</Text>
+      {collapsedLines ? (
+        <>
+          {/* Invisible, unclamped copy used only to count the real number of
+              lines — a clamped Text doesn't reliably report that on both
+              platforms, and "Show more" should only appear when needed. */}
+          <Text
+            style={[textStyle, styles.measurer]}
+            onTextLayout={(e) => setOverflows(e.nativeEvent.lines.length > collapsedLines)}
+          >
+            {shownText}
+          </Text>
+          <Text style={textStyle} numberOfLines={expanded ? undefined : collapsedLines}>
+            {shownText}
+          </Text>
+          {overflows && (
+            <TouchableOpacity onPress={() => setExpanded((v) => !v)}>
+              <Text style={styles.suggestLink}>{expanded ? 'Show less' : 'Show more'}</Text>
+            </TouchableOpacity>
+          )}
+        </>
+      ) : (
+        <Text style={textStyle}>{shownText}</Text>
+      )}
 
       {pendingProposal && (
         <View style={styles.pendingBox}>
@@ -105,6 +135,7 @@ export function SiteFieldEditor({
 }
 
 const styles = StyleSheet.create({
+  measurer: { position: 'absolute', opacity: 0, left: 0, right: 0 },
   suggestLink: { fontSize: 11, color: BRAND.oxblood, fontWeight: '600', marginBottom: 4 },
   pendingBox: {
     marginBottom: 6,

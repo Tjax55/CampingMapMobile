@@ -120,6 +120,7 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
                   pendingProposal={pendingDescriptionEdit}
                   session={session}
                   multiline
+                  collapsedLines={3}
                   textStyle={styles.description}
                   onPropose={handlePropose}
                 />
