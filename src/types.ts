@@ -11,7 +11,7 @@ export const SITE_KINDS = [
 export type SiteKind = (typeof SITE_KINDS)[number]
 
 /** Mirrors the `site_source` enum in supabase/schema.sql. */
-export type SiteSource = 'ridb' | 'osm' | 'blm' | 'user' | 'cracker_barrel' | 'walmart' | 'truck_stop'
+export type SiteSource = 'ridb' | 'osm' | 'blm' | 'user' | 'cracker_barrel' | 'walmart' | 'truck_stop' | 'osm_water' | 'osm_trash'
 
 export const CELL_PROVIDERS = ['verizon', 'tmobile', 'att'] as const
 export type CellProvider = (typeof CELL_PROVIDERS)[number]
