@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import { useSite } from '@/hooks/useSite'
@@ -6,7 +6,8 @@ import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
 import { useSiteEditProposals } from '@/hooks/useSiteEditProposals'
 import { useAuth } from '@/lib/useAuth'
-import { KIND_COLORS, KIND_LABELS, type SiteEditField } from '@/types'
+import { BRAND } from '@/theme'
+import { KIND_COLORS, KIND_LABELS } from '@/types'
 import { VisitsSection } from './VisitsSection'
 import { CapacitySection } from './CapacitySection'
 import { SiteFieldEditor } from './SiteFieldEditor'
@@ -53,9 +54,65 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
   const pendingNameEdit = proposals.find((p) => p.field === 'name') ?? null
   const pendingDescriptionEdit = proposals.find((p) => p.field === 'description') ?? null
 
-  async function handlePropose(field: SiteEditField, value: string): Promise<string | null> {
-    if (!session) return 'Sign in to suggest an edit.'
-    return propose(field, value, session.user.id)
+  // One "Suggest an edit" mode for name, description and capacity together:
+  // name/description go to the admin as proposals, a capacity entry goes in
+  // as a pending report — all submitted with the single button below.
+  const [editing, setEditing] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [descriptionDraft, setDescriptionDraft] = useState('')
+  const [vehicleType, setVehicleType] = useState('')
+  const [count, setCount] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  function startEditing() {
+    if (!site) return
+    setNameDraft(site.name)
+    setDescriptionDraft(site.description ?? '')
+    setVehicleType('')
+    setCount('')
+    setEditError(null)
+    setEditing(true)
+  }
+
+  async function submitEdits() {
+    if (!site || !session) return
+    const parsedCount = Number(count)
+    const hasCapacity = vehicleType.trim() !== '' || count.trim() !== ''
+    if (hasCapacity && !(vehicleType.trim() !== '' && Number.isFinite(parsedCount) && parsedCount > 0)) {
+      setEditError('Enter both a vehicle type and a count above zero, or clear both.')
+      return
+    }
+
+    const nameChanged = !pendingNameEdit && nameDraft.trim() !== '' && nameDraft.trim() !== site.name
+    const descriptionChanged =
+      !pendingDescriptionEdit && descriptionDraft.trim() !== '' && descriptionDraft.trim() !== (site.description ?? '')
+    if (!nameChanged && !descriptionChanged && !hasCapacity) {
+      setEditError('Nothing changed yet.')
+      return
+    }
+
+    setSaving(true)
+    setEditError(null)
+    let result: string | null = null
+    if (nameChanged) result = await propose('name', nameDraft.trim(), session.user.id)
+    if (!result && descriptionChanged) {
+      result = await propose('description', descriptionDraft.trim(), session.user.id)
+    }
+    if (!result && hasCapacity) {
+      result = await addEntry({
+        vehicle_type: vehicleType.trim(),
+        count: parsedCount,
+        user_id: session.user.id,
+      })
+    }
+    setSaving(false)
+
+    if (result) {
+      setEditError(result)
+      return
+    }
+    setEditing(false)
   }
 
   return (
@@ -87,14 +144,20 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               <Text style={styles.badgeText}>{KIND_LABELS[site.kind]}</Text>
             </View>
             <SiteFieldEditor
-              field="name"
               currentValue={site.name}
               placeholder="Site name"
               pendingProposal={pendingNameEdit}
-              session={session}
+              editing={editing}
+              draft={nameDraft}
+              onChangeDraft={setNameDraft}
               textStyle={styles.title}
-              onPropose={handlePropose}
             />
+
+            {session && !editing && (
+              <TouchableOpacity onPress={startEditing}>
+                <Text style={styles.suggestLink}>Suggest an edit ✎</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.ratingSummary}>
               {avgRating ? (
@@ -109,20 +172,20 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               )}
             </View>
 
-            {(site.description || pendingDescriptionEdit || session) && (
+            {(site.description || pendingDescriptionEdit || editing) && (
               <View style={styles.descriptionSection}>
                 <Text style={styles.heading}>Description</Text>
                 <SiteFieldEditor
-                  field="description"
                   currentValue={site.description ?? ''}
                   displayValue={site.description || 'No description yet.'}
                   placeholder="What should campers know about this site?"
                   pendingProposal={pendingDescriptionEdit}
-                  session={session}
+                  editing={editing}
+                  draft={descriptionDraft}
+                  onChangeDraft={setDescriptionDraft}
                   multiline
                   collapsedLines={3}
                   textStyle={styles.description}
-                  onPropose={handlePropose}
                 />
               </View>
             )}
@@ -131,10 +194,30 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               entries={entries}
               loading={capacityLoading}
               error={capacityError}
-              onAdd={addEntry}
-              session={session}
-              onSignIn={signInWithGoogle}
+              editing={editing}
+              vehicleType={vehicleType}
+              count={count}
+              onChangeVehicleType={setVehicleType}
+              onChangeCount={setCount}
             />
+
+            {editing && (
+              <View style={styles.editBar}>
+                {editError && <Text style={styles.error}>{editError}</Text>}
+                <View style={styles.editActions}>
+                  <TouchableOpacity onPress={() => setEditing(false)} disabled={saving}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.submitEditsButton, saving && styles.submitEditsDisabled]}
+                    onPress={submitEdits}
+                    disabled={saving}
+                  >
+                    <Text style={styles.submitEditsText}>{saving ? 'Submitting…' : 'Submit suggestions'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             <VisitsSection
               visits={visits}
@@ -176,6 +259,18 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
+  suggestLink: { fontSize: 12, color: BRAND.oxblood, fontWeight: '600', marginBottom: 8 },
+  editBar: { marginTop: 14, gap: 6 },
+  editActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 14 },
+  cancelText: { fontSize: 13, color: '#8a978f', fontWeight: '600' },
+  submitEditsButton: {
+    backgroundColor: BRAND.oxblood,
+    borderRadius: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+  },
+  submitEditsDisabled: { backgroundColor: '#b3c4ba' },
+  submitEditsText: { color: '#ffffff', fontWeight: '600', fontSize: 13 },
   panel: {
     position: 'absolute',
     top: 12,

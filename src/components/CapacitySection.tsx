@@ -1,49 +1,31 @@
-import { useState } from 'react'
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import type { Session } from '@supabase/supabase-js'
+import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { BRAND } from '@/theme'
-import type { CapacityEntry, CapacityInput } from '@/types'
-import { SignInPrompt } from './SignInPrompt'
+import type { CapacityEntry } from '@/types'
 
 type Props = {
   entries: CapacityEntry[]
   loading: boolean
   error: string | null
-  onAdd: (input: Omit<CapacityInput, 'site_id'>) => Promise<string | null>
-  session: Session | null
-  onSignIn: () => Promise<string | null>
+  /** Whether the screen-wide "Suggest an edit" mode is on. */
+  editing: boolean
+  vehicleType: string
+  count: string
+  onChangeVehicleType: (value: string) => void
+  onChangeCount: (value: string) => void
 }
 
-/** Web-app equivalent: src/sites/CapacitySection.tsx. */
-export function CapacitySection({ entries, loading, error, onAdd, session, onSignIn }: Props) {
-  const [vehicleType, setVehicleType] = useState('')
-  const [count, setCount] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-
-  const parsedCount = Number(count)
-  const canSubmit = vehicleType.trim() !== '' && Number.isFinite(parsedCount) && parsedCount > 0
-
-  async function handleSubmit() {
-    if (!canSubmit || !session) return
-    setSaving(true)
-    setFormError(null)
-
-    const result = await onAdd({
-      vehicle_type: vehicleType.trim(),
-      count: parsedCount,
-      user_id: session.user.id,
-    })
-
-    setSaving(false)
-    if (result) {
-      setFormError(result)
-      return
-    }
-    setVehicleType('')
-    setCount('')
-  }
-
+/** Web-app equivalent: src/sites/CapacitySection.tsx. The add form only
+ * shows in edit mode; SiteDetailPanel owns the single submit button. */
+export function CapacitySection({
+  entries,
+  loading,
+  error,
+  editing,
+  vehicleType,
+  count,
+  onChangeVehicleType,
+  onChangeCount,
+}: Props) {
   return (
     <View style={styles.section}>
       <Text style={styles.heading}>Capacity</Text>
@@ -75,7 +57,7 @@ export function CapacitySection({ entries, loading, error, onAdd, session, onSig
         </View>
       ))}
 
-      {session ? (
+      {editing && (
         <View style={styles.form}>
           <View style={styles.row}>
             <View style={styles.fieldWide}>
@@ -83,7 +65,7 @@ export function CapacitySection({ entries, loading, error, onAdd, session, onSig
               <TextInput
                 style={styles.input}
                 value={vehicleType}
-                onChangeText={setVehicleType}
+                onChangeText={onChangeVehicleType}
                 maxLength={40}
                 placeholder="RV, tent, car…"
               />
@@ -93,25 +75,13 @@ export function CapacitySection({ entries, loading, error, onAdd, session, onSig
               <TextInput
                 style={styles.input}
                 value={count}
-                onChangeText={setCount}
+                onChangeText={onChangeCount}
                 keyboardType="number-pad"
                 maxLength={3}
               />
             </View>
           </View>
-
-          {formError && <Text style={styles.error}>{formError}</Text>}
-
-          <TouchableOpacity
-            style={[styles.submitButton, (!canSubmit || saving) && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!canSubmit || saving}
-          >
-            <Text style={styles.submitButtonText}>{saving ? 'Adding…' : 'Add'}</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <SignInPrompt message="Sign in to add a capacity report." onSignIn={onSignIn} />
       )}
     </View>
   )
@@ -158,12 +128,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 13,
   },
-  submitButton: {
-    backgroundColor: BRAND.oxblood,
-    borderRadius: 6,
-    paddingVertical: 9,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: { backgroundColor: '#b3c4ba' },
-  submitButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 13 },
 })
