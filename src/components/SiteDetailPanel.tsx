@@ -5,13 +5,15 @@ import { useSite } from '@/hooks/useSite'
 import { useVisits } from '@/hooks/useVisits'
 import { useCapacity } from '@/hooks/useCapacity'
 import { useSiteEditProposals } from '@/hooks/useSiteEditProposals'
+import { useElevation } from '@/hooks/useElevation'
 import { useAuth } from '@/lib/useAuth'
 import { useIsAdmin } from '@/lib/useIsAdmin'
 import { BRAND } from '@/theme'
-import { KIND_COLORS, KIND_LABELS } from '@/types'
+import { KIND_COLORS, KIND_LABELS, type SiteServices } from '@/types'
 import { VisitsSection } from './VisitsSection'
 import { CapacitySection } from './CapacitySection'
 import { SiteFieldEditor } from './SiteFieldEditor'
+import { ServicesSection, normalizeServices, servicesEqual } from './ServicesSection'
 
 type Props = {
   siteId: string
@@ -55,13 +57,17 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
 
   const pendingNameEdit = proposals.find((p) => p.field === 'name') ?? null
   const pendingDescriptionEdit = proposals.find((p) => p.field === 'description') ?? null
+  const pendingServicesEdit = proposals.find((p) => p.field === 'services') ?? null
+  const elevationFeet = useElevation(site?.lat, site?.lon)
 
-  // One "Suggest an edit" mode for name, description and capacity together:
-  // name/description go to the admin as proposals, a capacity entry goes in
-  // as a pending report — all submitted with the single button below.
+  // One "Suggest an edit" mode for name, description, services and capacity
+  // together: name/description/services go to the admin as proposals, a
+  // capacity entry goes in as a pending report — all submitted with the
+  // single button below.
   const [editing, setEditing] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
+  const [servicesDraft, setServicesDraft] = useState<SiteServices>({})
   const [vehicleType, setVehicleType] = useState('')
   const [count, setCount] = useState('')
   const [saving, setSaving] = useState(false)
@@ -71,6 +77,7 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
     if (!site) return
     setNameDraft(site.name)
     setDescriptionDraft(site.description ?? '')
+    setServicesDraft(normalizeServices(site.services))
     setVehicleType('')
     setCount('')
     setEditError(null)
@@ -89,7 +96,8 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
     const nameChanged = !pendingNameEdit && nameDraft.trim() !== '' && nameDraft.trim() !== site.name
     const descriptionChanged =
       !pendingDescriptionEdit && descriptionDraft.trim() !== '' && descriptionDraft.trim() !== (site.description ?? '')
-    if (!nameChanged && !descriptionChanged && !hasCapacity) {
+    const servicesChanged = !pendingServicesEdit && !servicesEqual(servicesDraft, site.services)
+    if (!nameChanged && !descriptionChanged && !servicesChanged && !hasCapacity) {
       setEditError('Nothing changed yet.')
       return
     }
@@ -100,6 +108,9 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
     if (nameChanged) result = await propose('name', nameDraft.trim(), session.user.id)
     if (!result && descriptionChanged) {
       result = await propose('description', descriptionDraft.trim(), session.user.id)
+    }
+    if (!result && servicesChanged) {
+      result = await propose('services', JSON.stringify(normalizeServices(servicesDraft)), session.user.id)
     }
     if (!result && hasCapacity) {
       result = await addEntry({
@@ -203,6 +214,14 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               onChangeCount={setCount}
             />
 
+            <ServicesSection
+              current={site.services}
+              pendingProposal={pendingServicesEdit}
+              editing={editing}
+              draft={servicesDraft}
+              onChangeDraft={setServicesDraft}
+            />
+
             {editing && (
               <View style={styles.editBar}>
                 {editError && <Text style={styles.error}>{editError}</Text>}
@@ -235,6 +254,11 @@ export function SiteDetailPanel({ siteId, onClose }: Props) {
               <Text style={styles.metaLabel}>Coordinates</Text>
               <Text style={styles.metaValue}>
                 {site.lat.toFixed(5)}, {site.lon.toFixed(5)}
+              </Text>
+
+              <Text style={[styles.metaLabel, styles.metaGap]}>Elevation</Text>
+              <Text style={styles.metaValue}>
+                {elevationFeet == null ? '—' : `${elevationFeet.toLocaleString()} ft`}
               </Text>
 
               <TouchableOpacity
@@ -330,6 +354,7 @@ const styles = StyleSheet.create({
   description: { fontSize: 14, lineHeight: 20, color: '#3f4f46' },
   metaSection: { marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#e2e8e4' },
   metaLabel: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6b7a70' },
+  metaGap: { marginTop: 8 },
   metaValue: { fontSize: 13, color: '#1d2b23', marginTop: 2, fontVariant: ['tabular-nums'] },
   directionsButton: { marginTop: 8, alignSelf: 'flex-start' },
   directionsText: { color: '#2f7a4d', fontWeight: '600', fontSize: 14 },

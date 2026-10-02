@@ -24,7 +24,7 @@ type ProposalRow = {
   field: SiteEditField
   proposed_value: string
   created_at: string
-  sites: { name: string; description: string | null } | null
+  sites: { name: string; description: string | null; services: unknown } | null
 }
 
 async function fetchPending(): Promise<{
@@ -41,7 +41,7 @@ async function fetchPending(): Promise<{
       .order('created_at', { ascending: true }),
     supabase
       .from('site_edit_proposals')
-      .select('id, site_id, field, proposed_value, created_at, sites(name, description)')
+      .select('id, site_id, field, proposed_value, created_at, sites(name, description, services)')
       .eq('status', 'pending')
       .order('created_at', { ascending: true }),
   ])
@@ -63,7 +63,14 @@ async function fetchPending(): Promise<{
     site_id: row.site_id,
     site_name: row.sites?.name ?? 'Unknown site',
     field: row.field,
-    current_value: row.field === 'name' ? (row.sites?.name ?? null) : (row.sites?.description ?? null),
+    current_value:
+      row.field === 'name'
+        ? (row.sites?.name ?? null)
+        : row.field === 'description'
+          ? (row.sites?.description ?? null)
+          : row.sites?.services
+            ? JSON.stringify(row.sites.services)
+            : null,
     proposed_value: row.proposed_value,
     created_at: row.created_at,
   }))
@@ -133,9 +140,19 @@ export function useAdminReview() {
     if (!supabase) return 'Supabase is not configured.'
 
     if (decision === 'approved') {
+      // `services` is stored as jsonb on the site but travels as JSON text in
+      // the proposal, so it's parsed back into an object before the write.
+      let newValue: unknown = value
+      if (proposal.field === 'services') {
+        try {
+          newValue = JSON.parse(value)
+        } catch {
+          return 'This services suggestion is not valid JSON, so it cannot be approved.'
+        }
+      }
       const { error: siteError } = await supabase
         .from('sites')
-        .update({ [proposal.field]: value })
+        .update({ [proposal.field]: newValue })
         .eq('id', proposal.site_id)
       if (siteError) return siteError.message
     }

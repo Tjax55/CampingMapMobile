@@ -4,6 +4,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useAdminReview } from '@/hooks/useAdminReview'
 import { BRAND } from '@/theme'
 import type { PendingSiteEditProposal } from '@/types'
+import { ServicesSummary, parseServices } from './ServicesSection'
 
 type Props = {
   adminUserId: string
@@ -14,7 +15,7 @@ function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-const FIELD_LABELS = { name: 'Name', description: 'Description' } as const
+const FIELD_LABELS = { name: 'Name', description: 'Description', services: 'Services' } as const
 
 function ProposalRow({
   proposal,
@@ -42,14 +43,27 @@ function ProposalRow({
         {FIELD_LABELS[proposal.field]} · {formatTimestamp(proposal.created_at)}
       </Text>
       <Text style={styles.currentLabel}>Current</Text>
-      <Text style={styles.currentValue}>{proposal.current_value || '(empty)'}</Text>
-      <Text style={styles.currentLabel}>Proposed (editable before approving)</Text>
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={setValue}
-        multiline={proposal.field === 'description'}
-      />
+      {proposal.field === 'services' ? (
+        <ServicesSummary services={parseServices(proposal.current_value)} />
+      ) : (
+        <Text style={styles.currentValue}>{proposal.current_value || '(empty)'}</Text>
+      )}
+      {proposal.field === 'services' ? (
+        <>
+          <Text style={styles.currentLabel}>Proposed</Text>
+          <ServicesSummary services={parseServices(proposal.proposed_value)} />
+        </>
+      ) : (
+        <>
+          <Text style={styles.currentLabel}>Proposed (editable before approving)</Text>
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={setValue}
+            multiline={proposal.field === 'description'}
+          />
+        </>
+      )}
       {error && <Text style={styles.error}>{error}</Text>}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.rejectButton} onPress={() => handle('rejected')} disabled={busy}>

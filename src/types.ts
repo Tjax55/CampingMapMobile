@@ -11,6 +11,41 @@ export type SiteKind = (typeof SITE_KINDS)[number]
 /** Mirrors the `site_source` enum in supabase/schema.sql. */
 export type SiteSource = 'ridb' | 'osm' | 'blm' | 'user' | 'cracker_barrel' | 'walmart' | 'truck_stop'
 
+export const CELL_PROVIDERS = ['verizon', 'tmobile', 'att'] as const
+export type CellProvider = (typeof CELL_PROVIDERS)[number]
+
+export const PROVIDER_LABELS: Record<CellProvider, string> = {
+  verizon: 'Verizon',
+  tmobile: 'T-Mobile',
+  att: 'AT&T',
+}
+
+/** Signal bars (1-5) at a site for one carrier, and whether a signal
+ * amplifier was used to get them. */
+export type CellInfo = { bars: number; amp: boolean }
+
+export const SERVICE_FLAGS = ['sun', 'shade', 'water', 'toilets', 'large_rigs', 'tent'] as const
+export type ServiceFlag = (typeof SERVICE_FLAGS)[number]
+
+export const SERVICE_LABELS: Record<ServiceFlag, string> = {
+  sun: 'Sun',
+  shade: 'Shade',
+  water: 'Water',
+  toilets: 'Toilets',
+  large_rigs: 'Large rigs',
+  tent: 'Tent',
+}
+
+/**
+ * Per-site "services" — the `sites.services` jsonb column. One shared answer
+ * per site, and admin data: users only ever propose it (a
+ * site_edit_proposals row with field 'services' and this shape as JSON text);
+ * an admin approval is what writes it to the site. Absent keys mean unknown.
+ */
+export type SiteServices = Partial<Record<ServiceFlag, boolean>> & {
+  cell?: Partial<Record<CellProvider, CellInfo>>
+}
+
 export type Site = {
   id: string
   name: string
@@ -20,6 +55,7 @@ export type Site = {
   description: string | null
   source: SiteSource
   source_ref: string | null
+  services: SiteServices | null
 }
 
 /** `user_id` is required on every new row as of login-gated data entry — see
@@ -105,7 +141,7 @@ export type CapacityInput = {
  * since an approved proposal's value has already been copied into `sites`
  * and a rejected one isn't shown to anyone.
  */
-export type SiteEditField = 'name' | 'description'
+export type SiteEditField = 'name' | 'description' | 'services'
 
 export type SiteEditProposal = {
   id: string

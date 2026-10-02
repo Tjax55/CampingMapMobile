@@ -8,7 +8,7 @@ type State = {
   error: string | null
 }
 
-const COLUMNS = 'id, name, kind, description, source, source_ref, lat, lon'
+const COLUMNS = 'id, name, kind, description, source, source_ref, lat, lon, services'
 
 /**
  * Fetches one site by id, for the detail screen. The map screen doesn't keep
