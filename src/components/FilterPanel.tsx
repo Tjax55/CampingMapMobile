@@ -1,5 +1,17 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { CATEGORY_COLORS, CATEGORY_LABELS, FILTER_CATEGORIES, type FilterCategory } from '@/types'
+import { BRAND } from '@/theme'
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  FILTER_CATEGORIES,
+  SERVICE_LABELS,
+  type FilterCategory,
+  type ServiceFlag,
+} from '@/types'
+
+// Only the services worth narrowing the map by; the rest (sun, shade,
+// toilets, ...) are still recorded on a site's detail screen.
+const FILTER_SERVICES: ServiceFlag[] = ['water', 'trash']
 
 type Props = {
   open: boolean
@@ -8,6 +20,9 @@ type Props = {
   onChange: (next: Set<FilterCategory>) => void
   showBlmLand: boolean
   onToggleBlmLand: (next: boolean) => void
+  /** Services a site must have to stay on the map; empty = no restriction. */
+  requiredServices: Set<ServiceFlag>
+  onChangeRequiredServices: (next: Set<ServiceFlag>) => void
   signedInAs: string | null
   onSignOut: () => void
   isAdmin: boolean
@@ -34,11 +49,20 @@ export function FilterPanel({
   onChange,
   showBlmLand,
   onToggleBlmLand,
+  requiredServices,
+  onChangeRequiredServices,
   signedInAs,
   onSignOut,
   isAdmin,
   onOpenAdmin,
 }: Props) {
+  function toggleService(flag: ServiceFlag) {
+    const next = new Set(requiredServices)
+    if (next.has(flag)) next.delete(flag)
+    else next.add(flag)
+    onChangeRequiredServices(next)
+  }
+
   function toggleCategory(category: FilterCategory) {
     const next = new Set(visible)
     if (next.has(category)) next.delete(category)
@@ -64,6 +88,14 @@ export function FilterPanel({
               >
                 <Checkbox checked={visible.has(category)} color={CATEGORY_COLORS[category]} />
                 <Text style={styles.rowLabel}>{CATEGORY_LABELS[category]}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <Text style={styles.sectionTitle}>Services</Text>
+            {FILTER_SERVICES.map((flag) => (
+              <TouchableOpacity key={flag} style={styles.row} onPress={() => toggleService(flag)}>
+                <Checkbox checked={requiredServices.has(flag)} color={BRAND.oxblood} />
+                <Text style={styles.rowLabel}>{SERVICE_LABELS[flag]}</Text>
               </TouchableOpacity>
             ))}
 

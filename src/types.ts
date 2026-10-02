@@ -24,7 +24,7 @@ export const PROVIDER_LABELS: Record<CellProvider, string> = {
  * amplifier was used to get them. */
 export type CellInfo = { bars: number; amp: boolean }
 
-export const SERVICE_FLAGS = ['sun', 'shade', 'water', 'toilets', 'large_rigs', 'tent'] as const
+export const SERVICE_FLAGS = ['sun', 'shade', 'water', 'toilets', 'trash', 'large_rigs', 'tent'] as const
 export type ServiceFlag = (typeof SERVICE_FLAGS)[number]
 
 export const SERVICE_LABELS: Record<ServiceFlag, string> = {
@@ -32,6 +32,7 @@ export const SERVICE_LABELS: Record<ServiceFlag, string> = {
   shade: 'Shade',
   water: 'Water',
   toilets: 'Toilets',
+  trash: 'Trash',
   large_rigs: 'Large rigs',
   tent: 'Tent',
 }

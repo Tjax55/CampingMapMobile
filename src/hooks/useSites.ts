@@ -8,7 +8,7 @@ type State = {
   error: string | null
 }
 
-const COLUMNS = 'id, name, kind, description, source, source_ref, lat, lon'
+const COLUMNS = 'id, name, kind, description, source, source_ref, lat, lon, services'
 
 /**
  * PostgREST caps a single response (Supabase defaults to 1000 rows). Without
