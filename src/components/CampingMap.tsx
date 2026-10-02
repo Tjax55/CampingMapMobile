@@ -19,7 +19,6 @@ import {
   FILTER_CATEGORIES,
   categoryOf,
   type FilterCategory,
-  type ServiceFlag,
   type Site,
 } from '@/types'
 import { AdminPanel } from './AdminPanel'
@@ -89,7 +88,6 @@ export function CampingMap() {
   const isAdmin = useIsAdmin(session)
   const [visible, setVisible] = useState<Set<FilterCategory>>(new Set(FILTER_CATEGORIES))
   const [showBlmLand, setShowBlmLand] = useState(true)
-  const [requiredServices, setRequiredServices] = useState<Set<ServiceFlag>>(new Set())
   const [filtersOpen, setFiltersOpen] = useState(false)
   // All rendered as overlays on top of this same, permanently-mounted map —
   // see SiteDetailPanel's comment for why that's deliberate, not a shortcut.
@@ -99,15 +97,9 @@ export function CampingMap() {
   const cameraRef = useRef<CameraRef>(null)
 
   const featureCollection = useMemo(() => {
-    // A checked service means "only sites known to have it" — a site with no
-    // services data yet counts as not having it.
-    const filtered = sites.filter(
-      (site) =>
-        visible.has(categoryOf(site)) &&
-        [...requiredServices].every((flag) => site.services?.[flag] === true),
-    )
+    const filtered = sites.filter((site) => visible.has(categoryOf(site)))
     return toFeatureCollection(filtered)
-  }, [sites, visible, requiredServices])
+  }, [sites, visible])
 
   // Attached to GeoJSONSource's onPress, not Map's — Map only receives
   // `features` in its own onPress if a child Source's onPress bubbles them
@@ -205,8 +197,6 @@ export function CampingMap() {
         onChange={setVisible}
         showBlmLand={showBlmLand}
         onToggleBlmLand={setShowBlmLand}
-        requiredServices={requiredServices}
-        onChangeRequiredServices={setRequiredServices}
         signedInAs={session ? displayNameFor(session) : null}
         onSignOut={signOut}
         isAdmin={isAdmin}

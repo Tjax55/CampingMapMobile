@@ -4,6 +4,8 @@ export const SITE_KINDS = [
   'national_forest',
   'other_public',
   'urban_lot',
+  'water',
+  'trash',
 ] as const
 
 export type SiteKind = (typeof SITE_KINDS)[number]
@@ -24,7 +26,7 @@ export const PROVIDER_LABELS: Record<CellProvider, string> = {
  * amplifier was used to get them. */
 export type CellInfo = { bars: number; amp: boolean }
 
-export const SERVICE_FLAGS = ['sun', 'shade', 'water', 'toilets', 'trash', 'large_rigs', 'tent'] as const
+export const SERVICE_FLAGS = ['sun', 'shade', 'water', 'toilets', 'large_rigs', 'tent'] as const
 export type ServiceFlag = (typeof SERVICE_FLAGS)[number]
 
 export const SERVICE_LABELS: Record<ServiceFlag, string> = {
@@ -32,7 +34,6 @@ export const SERVICE_LABELS: Record<ServiceFlag, string> = {
   shade: 'Shade',
   water: 'Water',
   toilets: 'Toilets',
-  trash: 'Trash',
   large_rigs: 'Large rigs',
   tent: 'Tent',
 }
@@ -182,6 +183,8 @@ export const KIND_LABELS: Record<SiteKind, string> = {
   national_forest: 'National Forest',
   other_public: 'Other public land',
   urban_lot: 'Urban parking',
+  water: 'Water',
+  trash: 'Trash',
 }
 
 /**
@@ -193,6 +196,8 @@ export const KIND_COLORS: Record<SiteKind, string> = {
   national_forest: '#2f7a4d',
   other_public: '#3d6fc2',
   urban_lot: '#8a4fbd',
+  water: '#2a9ad6',
+  trash: '#6b7a70',
 }
 
 /**
@@ -213,6 +218,8 @@ export const FILTER_CATEGORIES = [
   'walmart',
   'truck_stop',
   'user_submitted',
+  'water',
+  'trash',
 ] as const
 
 export type FilterCategory = (typeof FILTER_CATEGORIES)[number]
@@ -233,6 +240,8 @@ export const CATEGORY_LABELS: Record<FilterCategory, string> = {
   walmart: 'Walmart',
   truck_stop: 'Truck stop',
   user_submitted: 'User submitted',
+  water: 'Water',
+  trash: 'Trash',
 }
 
 /**
@@ -249,4 +258,6 @@ export const CATEGORY_COLORS: Record<FilterCategory, string> = {
   walmart: KIND_COLORS.urban_lot,
   truck_stop: KIND_COLORS.urban_lot,
   user_submitted: KIND_COLORS.urban_lot,
+  water: KIND_COLORS.water,
+  trash: KIND_COLORS.trash,
 }

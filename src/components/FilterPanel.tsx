@@ -1,17 +1,11 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { BRAND } from '@/theme'
-import {
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-  FILTER_CATEGORIES,
-  SERVICE_LABELS,
-  type FilterCategory,
-  type ServiceFlag,
-} from '@/types'
+import { CATEGORY_COLORS, CATEGORY_LABELS, FILTER_CATEGORIES, type FilterCategory } from '@/types'
 
-// Only the services worth narrowing the map by; the rest (sun, shade,
-// toilets, ...) are still recorded on a site's detail screen.
-const FILTER_SERVICES: ServiceFlag[] = ['water', 'trash']
+// Water and trash are places in their own right (somewhere to fill water or
+// dump trash), filtered exactly like the campsite categories — they just get
+// their own "Services" heading in the panel.
+const SERVICE_CATEGORIES: FilterCategory[] = ['water', 'trash']
+const CAMPSITE_CATEGORIES = FILTER_CATEGORIES.filter((c) => !SERVICE_CATEGORIES.includes(c))
 
 type Props = {
   open: boolean
@@ -20,9 +14,6 @@ type Props = {
   onChange: (next: Set<FilterCategory>) => void
   showBlmLand: boolean
   onToggleBlmLand: (next: boolean) => void
-  /** Services a site must have to stay on the map; empty = no restriction. */
-  requiredServices: Set<ServiceFlag>
-  onChangeRequiredServices: (next: Set<ServiceFlag>) => void
   signedInAs: string | null
   onSignOut: () => void
   isAdmin: boolean
@@ -49,20 +40,11 @@ export function FilterPanel({
   onChange,
   showBlmLand,
   onToggleBlmLand,
-  requiredServices,
-  onChangeRequiredServices,
   signedInAs,
   onSignOut,
   isAdmin,
   onOpenAdmin,
 }: Props) {
-  function toggleService(flag: ServiceFlag) {
-    const next = new Set(requiredServices)
-    if (next.has(flag)) next.delete(flag)
-    else next.add(flag)
-    onChangeRequiredServices(next)
-  }
-
   function toggleCategory(category: FilterCategory) {
     const next = new Set(visible)
     if (next.has(category)) next.delete(category)
@@ -80,7 +62,7 @@ export function FilterPanel({
         <View style={styles.panel}>
           <ScrollView>
             <Text style={styles.sectionTitle}>Campsites</Text>
-            {FILTER_CATEGORIES.map((category) => (
+            {CAMPSITE_CATEGORIES.map((category) => (
               <TouchableOpacity
                 key={category}
                 style={styles.row}
@@ -92,10 +74,14 @@ export function FilterPanel({
             ))}
 
             <Text style={styles.sectionTitle}>Services</Text>
-            {FILTER_SERVICES.map((flag) => (
-              <TouchableOpacity key={flag} style={styles.row} onPress={() => toggleService(flag)}>
-                <Checkbox checked={requiredServices.has(flag)} color={BRAND.oxblood} />
-                <Text style={styles.rowLabel}>{SERVICE_LABELS[flag]}</Text>
+            {SERVICE_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={styles.row}
+                onPress={() => toggleCategory(category)}
+              >
+                <Checkbox checked={visible.has(category)} color={CATEGORY_COLORS[category]} />
+                <Text style={styles.rowLabel}>{CATEGORY_LABELS[category]}</Text>
               </TouchableOpacity>
             ))}
 
