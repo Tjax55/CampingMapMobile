@@ -16,7 +16,11 @@ type Props = {
   onSignIn: () => Promise<string | null>
 }
 
-const RATINGS = Array.from({ length: 10 }, (_, i) => i + 1)
+// Five big stars for easy tapping; each star is worth 2 points because the
+// database (and the website) store ratings as 1-10. A pre-existing odd rating
+// (e.g. 7) lights the nearest star count and is only changed if tapped.
+const STARS = [1, 2, 3, 4, 5]
+const POINTS_PER_STAR = 2
 
 // Reopening a site within this window offers to edit the same visit instead
 // of posting a duplicate one — see the mobile session's "Save" vs "Post"
@@ -122,19 +126,24 @@ export function VisitsSection({ visits, loading, error, onAdd, onUpdate, session
             {recentOwnVisit ? 'Editing your visit' : 'Posting as'} {displayNameFor(session)}
           </Text>
 
-          <Text style={styles.label}>Rating (optional)</Text>
-          <View style={styles.ratingRow}>
-            {RATINGS.map((n) => (
-              <TouchableOpacity
-                key={n}
-                style={[styles.ratingPill, rating === n && styles.ratingPillActive]}
-                onPress={() => setRating(rating === n ? null : n)}
-              >
-                <Text style={[styles.ratingPillText, rating === n && styles.ratingPillTextActive]}>
-                  {n}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.label}>
+            Rating (optional){rating != null ? ' — ' + rating + '/10' : ''}
+          </Text>
+          <View style={styles.starRow}>
+            {STARS.map((n) => {
+              const filled = rating != null && n <= Math.round(rating / POINTS_PER_STAR)
+              const value = n * POINTS_PER_STAR
+              return (
+                <TouchableOpacity
+                  key={n}
+                  style={styles.starButton}
+                  onPress={() => setRating(rating === value ? null : value)}
+                  accessibilityLabel={n + (n === 1 ? ' star' : ' stars')}
+                >
+                  <Text style={[styles.star, filled && styles.starFilled]}>★</Text>
+                </TouchableOpacity>
+              )
+            })}
           </View>
 
           <Text style={styles.label}>Comment (optional)</Text>
@@ -193,19 +202,10 @@ const styles = StyleSheet.create({
   comment: { marginTop: 3, fontSize: 13, color: '#3f4f46', lineHeight: 18 },
   form: { marginTop: 8, gap: 6 },
   label: { fontSize: 12, fontWeight: '600', color: '#3f4f46', marginTop: 4 },
-  ratingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  ratingPill: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#cfd8d2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ratingPillActive: { backgroundColor: BRAND.brass, borderColor: BRAND.brass },
-  ratingPillText: { fontSize: 12, color: '#1d2b23' },
-  ratingPillTextActive: { color: '#1d2b23', fontWeight: '700' },
+  starRow: { flexDirection: 'row' },
+  starButton: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center' },
+  star: { fontSize: 40, color: '#d9dfdb' },
+  starFilled: { color: BRAND.brass },
   textArea: {
     borderWidth: 1,
     borderColor: '#cfd8d2',
